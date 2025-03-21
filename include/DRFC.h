@@ -12,7 +12,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2025, Doosan Robotics
+ *  Copyright (c) 2024, Doosan Robotics
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -42,6 +42,7 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
+
 
 #pragma once
 
@@ -327,6 +328,12 @@ typedef enum {
 } ROT_DIR;
 
 //
+// application option : DR_MV_APP_NONE / DR_MV_APP_WELD
+//
+typedef enum {
+    DR_MV_APP_NONE,
+    DR_MV_APP_WELD
+} DR_MV_APP;
 
 //
 // alter motion path mode enumerated value
@@ -450,7 +457,8 @@ typedef enum{
 // gpio index enumerated value
 //
 
-// Input 20, Output 16
+// V2 : Input 16, Output 16
+// V3 : Input 20, Output 16
 typedef enum {
     GPIO_CTRLBOX_DIGITAL_INDEX_1= 0,
     GPIO_CTRLBOX_DIGITAL_INDEX_2,
@@ -681,6 +689,14 @@ typedef enum {
 
 } SAFETY_MODE;
 
+typedef enum    
+{
+	SMODE_SERVO_OFF=0,
+	SMODE_SERVO_ON,
+	SMODE_HOLD, 
+	SMODE_POSITION_MODE,
+	SMODE_TORQUE_MODE,
+}SERVO_MODE;
 //
 // safety state enumerated value
 //
