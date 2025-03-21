@@ -1,4 +1,4 @@
-// DRFTWin32.cpp
+// DRFTWin32.cpp : 콘솔 응용 프로그램에 대한 진입점을 정의합니다.
 //
 
 #ifdef __XENO__
@@ -20,10 +20,6 @@
 #include <unistd.h>
 
 
-// Select your controller version v2(v2~) or v3(v3~)
-#ifndef DRCF_VERSION
-    #define DRCF_VERSION 2
-#endif
 #include "../../include/DRFLEx.h"
 using namespace DRAFramework;
 
@@ -68,37 +64,37 @@ int getch()
     int c;
     struct termios oldattr, newattr;
 
-    tcgetattr(STDIN_FILENO, &oldattr);          
+    tcgetattr(STDIN_FILENO, &oldattr);           // 현재 터미널 설정 읽음
     newattr = oldattr;
-    newattr.c_lflag &= ~(ICANON | ECHO);         
-    newattr.c_cc[VMIN] = 1;                      
-    newattr.c_cc[VTIME] = 0;                     
-    tcsetattr(STDIN_FILENO, TCSANOW, &newattr);  
-    c = getchar();                               
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldattr);  
+    newattr.c_lflag &= ~(ICANON | ECHO);         // CANONICAL과 ECHO 끔
+    newattr.c_cc[VMIN] = 1;                      // 최소 입력 문자 수를 1로 설정
+    newattr.c_cc[VTIME] = 0;                     // 최소 읽기 대기 시간을 0으로 설정
+    tcsetattr(STDIN_FILENO, TCSANOW, &newattr);  // 터미널에 설정 입력
+    c = getchar();                               // 키보드 입력 읽음
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldattr);  // 원래의 설정으로 복구
     return c;
 }
 
 void OnTpInitializingCompleted() {
-  // Tp.
+  // Tp 초기화 이후 제어권 요청.
   g_TpInitailizingComplted = TRUE;
   Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
 }
 
 void OnHommingCompleted() {
-  // 50msec 
+  // 50msec 이내 작업만 수행할 것.
   cout << "homming completed" << endl;
 }
 
 void OnProgramStopped(const PROGRAM_STOP_CAUSE) {
   assert(Drfl.PlayDrlStop(STOP_TYPE_SLOW));
-  // 50msec
+  // 50msec 이내 작업만 수행할 것.
   // assert(Drfl.SetRobotMode(ROBOT_MODE_MANUAL));
   cout << "program stopped" << endl;
 }
 
 void OnMonitoringDataCB(const LPMONITORING_DATA pData) {
-  // 50msec 
+  // 50msec 이내 작업만 수행할 것.
 
   return;
   cout << "# monitoring 0 data " << pData->_tCtrl._tTask._fActualPos[0][0]
@@ -138,21 +134,11 @@ void OnMonitoringCtrlIOExCB(const LPMONITORING_CTRLIO_EX pData) {
   }
 }
 
-void OnMonitoringCtrlIOEx2CB(const LPMONITORING_CTRLIO_EX2 pData) {
-  return;
-  cout << "# monitoring ctrl 1 data" << endl;
-  for (int i = 0; i < 16; i++) {
-    cout << (int)pData->_tInput._iActualDI[i] << endl;
-  }
-  for (int i = 0; i < 16; i++) {
-    cout << (int)pData->_tOutput._iTargetDO[i] << endl;
-  }
-}
-
 void OnMonitoringStateCB(const ROBOT_STATE eState) {
-
+  // 50msec 이내 작업만 수행할 것.
   switch ((unsigned char)eState) {
-#if 0  
+#if 0  // TP 초기화시 사용하는 로직임으로 API 레벨에서는 사용하지 말것.(TP없이
+       // 단독 사용일 경우, 사용)
     case STATE_NOT_READY:
         if (g_bHasControlAuthority) Drfl.SetRobotControl(CONTROL_INIT_CONFIG);
         break;
@@ -202,6 +188,7 @@ void OnMonitoringStateCB(const ROBOT_STATE eState) {
 
 void OnMonitroingAccessControlCB(
     const MONITORING_ACCESS_CONTROL eTrasnsitControl) {
+  // 50msec 이내 작업만 수행할 것.
 
   switch (eTrasnsitControl) {
     case MONITORING_ACCESS_CONTROL_REQUEST:
@@ -393,13 +380,12 @@ void TrajectoryGenerator(PlanParam *plan, TraParam *tra)
 
 int main(int argc, char** argv) {
 
+  // 콜백 등록(// 콜백 함수 내에서는 50msec 이내 작업만 수행할 것)
   Drfl.set_on_homming_completed(OnHommingCompleted);
+  Drfl.set_on_monitoring_data(OnMonitoringDataCB);
   Drfl.set_on_monitoring_data_ex(OnMonitoringDataExCB);
-  #if DRCF_VERSION == 2
-    Drfl.set_on_monitoring_ctrl_io_ex(OnMonitoringCtrlIOExCB);
-  #elif DRCF_VERSION == 3
-    Drfl.set_on_monitoring_ctrl_io_ex(OnMonitoringCtrlIOEx2CB);
-  #endif
+  Drfl.set_on_monitoring_ctrl_io(OnMonitoringCtrlIOCB);
+  Drfl.set_on_monitoring_ctrl_io_ex(OnMonitoringCtrlIOExCB);
   Drfl.set_on_monitoring_state(OnMonitoringStateCB);
   Drfl.set_on_monitoring_access_control(OnMonitroingAccessControlCB);
   Drfl.set_on_tp_initializing_completed(OnTpInitializingCompleted);
@@ -413,13 +399,15 @@ int main(int argc, char** argv) {
   Drfl.set_on_program_stopped(OnProgramStopped);
   Drfl.set_on_disconnected(OnDisConnected);
 
+  // 연결 수립
   assert(Drfl.open_connection("192.168.137.100"));
 
+  // 버전 정보 획득
   SYSTEM_VERSION tSysVerion = {
       '\0',
   };
   Drfl.get_system_version(&tSysVerion);
-  
+  // 모니터링 데이터 버전 변경
   Drfl.setup_monitoring_version(1);
   Drfl.set_robot_control(CONTROL_SERVO_ON);
   Drfl.set_digital_output(GPIO_CTRLBOX_DIGITAL_INDEX_10, TRUE);
@@ -429,6 +417,8 @@ int main(int argc, char** argv) {
   while ((Drfl.get_robot_state() != STATE_STANDBY) || !g_bHasControlAuthority)
     // Sleep(1000);
     this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+  // 수동 모드 설정
 
   assert(Drfl.set_robot_mode(ROBOT_MODE_AUTONOMOUS));
   assert(Drfl.set_robot_system(ROBOT_SYSTEM_REAL));
@@ -507,8 +497,8 @@ int main(int argc, char** argv) {
           case EXAMPLE_GPIO:
             cout << "reset gpio" << endl;
             for (int i = 0; i < NUM_DIGITAL; i++) {
-              Drfl.set_digital_output((GPIO_CTRLBOX_DIGITAL_INDEX)i,
-                                                  FALSE);
+              assert(Drfl.SetCtrlBoxDigitalOutput((GPIO_CTRLBOX_DIGITAL_INDEX)i,
+                                                  FALSE));
             }
             break;
           case EXAMPLE_MODBUS:

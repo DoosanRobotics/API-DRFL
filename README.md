@@ -61,6 +61,16 @@ To build the Windows example, utilize the Visual Studio 2015 solution file provi
 
 > Ubuntu supports versions : 18.04, 20.04 and 22.04.
 
+
+
+**✅ Quick Build (Recommended)**
+
+You can use the provided build script to compile the example easily:
+
+    ./API_DRFL_BUILD.sh
+
+**Manual Compile**
+
 1. Navigate to the example directory and compile using g++:
    ```bash
    g++ -c main.cpp
