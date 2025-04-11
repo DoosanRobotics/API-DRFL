@@ -1,4 +1,4 @@
-// DRFTWin32.cpp : ÄÜ¼Ö ÀÀ¿ë ÇÁ·Î±×·¥¿¡ ´ëÇÑ ÁøÀÔÁ¡À» Á¤ÀÇÇÕ´Ï´Ù.
+// DRFTWin32.cpp : ï¿½Ü¼ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Î±×·ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Õ´Ï´ï¿½.
 //
 
 #ifdef __XENO__
@@ -64,37 +64,37 @@ int getch()
     int c;
     struct termios oldattr, newattr;
 
-    tcgetattr(STDIN_FILENO, &oldattr);           // ÇöÀç ÅÍ¹Ì³Î ¼³Á¤ ÀÐÀ½
+    tcgetattr(STDIN_FILENO, &oldattr);           // ï¿½ï¿½ï¿½ï¿½ ï¿½Í¹Ì³ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     newattr = oldattr;
-    newattr.c_lflag &= ~(ICANON | ECHO);         // CANONICAL°ú ECHO ²û
-    newattr.c_cc[VMIN] = 1;                      // ÃÖ¼Ò ÀÔ·Â ¹®ÀÚ ¼ö¸¦ 1·Î ¼³Á¤
-    newattr.c_cc[VTIME] = 0;                     // ÃÖ¼Ò ÀÐ±â ´ë±â ½Ã°£À» 0À¸·Î ¼³Á¤
-    tcsetattr(STDIN_FILENO, TCSANOW, &newattr);  // ÅÍ¹Ì³Î¿¡ ¼³Á¤ ÀÔ·Â
-    c = getchar();                               // Å°º¸µå ÀÔ·Â ÀÐÀ½
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldattr);  // ¿ø·¡ÀÇ ¼³Á¤À¸·Î º¹±¸
+    newattr.c_lflag &= ~(ICANON | ECHO);         // CANONICALï¿½ï¿½ ECHO ï¿½ï¿½
+    newattr.c_cc[VMIN] = 1;                      // ï¿½Ö¼ï¿½ ï¿½Ô·ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ 1ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+    newattr.c_cc[VTIME] = 0;                     // ï¿½Ö¼ï¿½ ï¿½Ð±ï¿½ ï¿½ï¿½ï¿½ ï¿½Ã°ï¿½ï¿½ï¿½ 0ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+    tcsetattr(STDIN_FILENO, TCSANOW, &newattr);  // ï¿½Í¹Ì³Î¿ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ô·ï¿½
+    c = getchar();                               // Å°ï¿½ï¿½ï¿½ï¿½ ï¿½Ô·ï¿½ ï¿½ï¿½ï¿½ï¿½
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldattr);  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     return c;
 }
 
 void OnTpInitializingCompleted() {
-  // Tp ÃÊ±âÈ­ ÀÌÈÄ Á¦¾î±Ç ¿äÃ».
+  // Tp ï¿½Ê±ï¿½È­ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ã».
   g_TpInitailizingComplted = TRUE;
   Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
 }
 
 void OnHommingCompleted() {
-  // 50msec ÀÌ³» ÀÛ¾÷¸¸ ¼öÇàÇÒ °Í.
+  // 50msec ï¿½Ì³ï¿½ ï¿½Û¾ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½.
   cout << "homming completed" << endl;
 }
 
 void OnProgramStopped(const PROGRAM_STOP_CAUSE) {
   assert(Drfl.PlayDrlStop(STOP_TYPE_SLOW));
-  // 50msec ÀÌ³» ÀÛ¾÷¸¸ ¼öÇàÇÒ °Í.
+  // 50msec ï¿½Ì³ï¿½ ï¿½Û¾ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½.
   // assert(Drfl.SetRobotMode(ROBOT_MODE_MANUAL));
   cout << "program stopped" << endl;
 }
 
 void OnMonitoringDataCB(const LPMONITORING_DATA pData) {
-  // 50msec ÀÌ³» ÀÛ¾÷¸¸ ¼öÇàÇÒ °Í.
+  // 50msec ï¿½Ì³ï¿½ ï¿½Û¾ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½.
 
   return;
   cout << "# monitoring 0 data " << pData->_tCtrl._tTask._fActualPos[0][0]
@@ -135,10 +135,10 @@ void OnMonitoringCtrlIOExCB(const LPMONITORING_CTRLIO_EX pData) {
 }
 
 void OnMonitoringStateCB(const ROBOT_STATE eState) {
-  // 50msec ÀÌ³» ÀÛ¾÷¸¸ ¼öÇàÇÒ °Í.
+  // 50msec ï¿½Ì³ï¿½ ï¿½Û¾ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½.
   switch ((unsigned char)eState) {
-#if 0  // TP ÃÊ±âÈ­½Ã »ç¿ëÇÏ´Â ·ÎÁ÷ÀÓÀ¸·Î API ·¹º§¿¡¼­´Â »ç¿ëÇÏÁö ¸»°Í.(TP¾øÀÌ
-       // ´Üµ¶ »ç¿ëÀÏ °æ¿ì, »ç¿ë)
+#if 0  // TP ï¿½Ê±ï¿½È­ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ API ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½.(TPï¿½ï¿½ï¿½ï¿½
+       // ï¿½Üµï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½, ï¿½ï¿½ï¿½)
     case STATE_NOT_READY:
         if (g_bHasControlAuthority) Drfl.SetRobotControl(CONTROL_INIT_CONFIG);
         break;
@@ -188,7 +188,7 @@ void OnMonitoringStateCB(const ROBOT_STATE eState) {
 
 void OnMonitroingAccessControlCB(
     const MONITORING_ACCESS_CONTROL eTrasnsitControl) {
-  // 50msec ÀÌ³» ÀÛ¾÷¸¸ ¼öÇàÇÒ °Í.
+  // 50msec ï¿½Ì³ï¿½ ï¿½Û¾ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½.
 
   switch (eTrasnsitControl) {
     case MONITORING_ACCESS_CONTROL_REQUEST:
@@ -380,7 +380,7 @@ void TrajectoryGenerator(PlanParam *plan, TraParam *tra)
 
 int main(int argc, char** argv) {
 
-  // ÄÝ¹é µî·Ï(// ÄÝ¹é ÇÔ¼ö ³»¿¡¼­´Â 50msec ÀÌ³» ÀÛ¾÷¸¸ ¼öÇàÇÒ °Í)
+  // ï¿½Ý¹ï¿½ ï¿½ï¿½ï¿½(// ï¿½Ý¹ï¿½ ï¿½Ô¼ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 50msec ï¿½Ì³ï¿½ ï¿½Û¾ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½)
   Drfl.set_on_homming_completed(OnHommingCompleted);
   Drfl.set_on_monitoring_data(OnMonitoringDataCB);
   Drfl.set_on_monitoring_data_ex(OnMonitoringDataExCB);
@@ -399,15 +399,15 @@ int main(int argc, char** argv) {
   Drfl.set_on_program_stopped(OnProgramStopped);
   Drfl.set_on_disconnected(OnDisConnected);
 
-  // ¿¬°á ¼ö¸³
+  // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
   assert(Drfl.open_connection("192.168.137.100"));
 
-  // ¹öÀü Á¤º¸ È¹µæ
+  // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ È¹ï¿½ï¿½
   SYSTEM_VERSION tSysVerion = {
       '\0',
   };
   Drfl.get_system_version(&tSysVerion);
-  // ¸ð´ÏÅÍ¸µ µ¥ÀÌÅÍ ¹öÀü º¯°æ
+  // ï¿½ï¿½ï¿½ï¿½Í¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
   Drfl.setup_monitoring_version(1);
   Drfl.set_robot_control(CONTROL_SERVO_ON);
   Drfl.set_digital_output(GPIO_CTRLBOX_DIGITAL_INDEX_10, TRUE);
@@ -418,7 +418,7 @@ int main(int argc, char** argv) {
     // Sleep(1000);
     this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-  // ¼öµ¿ ¸ðµå ¼³Á¤
+  // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 
   assert(Drfl.set_robot_mode(ROBOT_MODE_AUTONOMOUS));
   assert(Drfl.set_robot_system(ROBOT_SYSTEM_REAL));
@@ -493,13 +493,6 @@ int main(int argc, char** argv) {
             // assert(Drfl.SetRobotMode(ROBOT_MODE_MANUAL));
             // assert(Drfl.SetRobotSystem(ROBOT_SYSTEM_REAL));
             cout << "drl player stop" << endl;
-            break;
-          case EXAMPLE_GPIO:
-            cout << "reset gpio" << endl;
-            for (int i = 0; i < NUM_DIGITAL; i++) {
-              assert(Drfl.SetCtrlBoxDigitalOutput((GPIO_CTRLBOX_DIGITAL_INDEX)i,
-                                                  FALSE));
-            }
             break;
           case EXAMPLE_MODBUS:
             cout << "reset modbus" << endl;
