@@ -39,8 +39,8 @@ This code uses a preprocessor macro (`DRCF_VERSION`) to ensure compatibility wit
 
 Please ensure your environment meets the following conditions:
 
-- **Library Composition**: Refer to the structure of the library via this [link](https://manual.doosanrobotics.com/help/api/latest/publish/en_us/composition-of-library-36471066.html).
-- **Recommended Specifications**: Review the recommended operational specifications [here](https://manual.doosanrobotics.com/help/api/latest/publish/en_us/recommended-operational-specification-50890483.html).
+- **Library Composition**: Refer to the structure of the library via this [link](https://manual.doosanrobotics.com/en/api/1.32/Publish/composition-of-library).
+- **Recommended Specifications**: Review the recommended operational specifications [here](https://manual.doosanrobotics.com/en/api/1.32/Publish/recommended-operational-specification).
 
 
 ## Build Guidelines
