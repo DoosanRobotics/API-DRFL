@@ -13,7 +13,7 @@ using namespace DRAFramework;
  * 
  */
 
-const std::string IP_ADDRESS = "127.0.0.1";
+const std::string IP_ADDRESS = "192.168.137.100";
 CDRFLEx robot; // Instance for APIs
 
 bool get_control_access = false; // Variable to check control authority
@@ -31,6 +31,7 @@ int main(){
 		std::cout << "[OnMonitroingAccessControlCB] Control Access : " << to_str(access) << std::endl;
 		if(MONITORING_ACCESS_CONTROL_GRANT == access) {
 			get_control_access = true;
+			std::cout << "Got Control Access !! " << std::endl;
 		}
 		if(MONITORING_ACCESS_CONTROL_LOSS == access) {
 			get_control_access = false;
@@ -43,6 +44,7 @@ int main(){
 		std::cout << "[OnMonitoringStateCB] Robot State : " << to_str(state) << std::endl;
 		if(STATE_STANDBY == state) {
 			is_standby = true;
+			std::cout << "Successfully Servo on !! " << std::endl;
 		}else {
 			is_standby = false;
 		}
@@ -70,15 +72,6 @@ int main(){
 	cout << "Controller (DRCF) version: " << tSysVerion._szController << endl;
 	cout << "Library version: " << robot.get_library_version() << endl; // GLXXXXXX
 
-
-	// In API, we typically set 'ROBOT_MODE_MANUAL' or 'ROBOT_MODE_AUTONOMOUS'.
-	// Generally, user need to specify 'ROBOT_MODE_MANUAL' before setting robot configuration.
-	// and specify 'ROBOT_MODE_AUTONOMOUS' before movements.
-	// In thie example, we would like to move the robot. set 'ROBOT_MODE_AUTONOMOUS'. 
-	if(!robot.set_robot_mode(ROBOT_MODE_AUTONOMOUS)) {
-		return 1;
-	}
-
 	// We will make sure "getting control access" and "stand_by" state.
 	// This means, being done of "ready to movement".
 	for (size_t retry = 0; retry < 10; ++retry, std::this_thread::sleep_for(std::chrono::milliseconds(1000))) {
@@ -99,6 +92,13 @@ int main(){
 		return 1;
 	}
 
+	// In API, we typically set 'ROBOT_MODE_MANUAL' or 'ROBOT_MODE_AUTONOMOUS'.
+	// Generally, user need to specify 'ROBOT_MODE_MANUAL' before setting robot configuration.
+	// and specify 'ROBOT_MODE_AUTONOMOUS' before movements.
+	// In thie example, we would like to move the robot. set 'ROBOT_MODE_AUTONOMOUS'. 
+	if(!robot.set_robot_mode(ROBOT_MODE_AUTONOMOUS)) {
+		return 1;
+	}
 	/*******************************************/
 	/********** READY TO MOVEMENT **************/
 	/*******************************************/
@@ -106,12 +106,12 @@ int main(){
 	std::cout << "Press Enter to continue..." ;
 	std::cin.get();  // Waits for user to press Enter
 
-	float targetPos[6] = {0.,0.,0.,0.,0.,0.};
+	float targetPos[6] = {0.,0.,10.,0.,0.,0.};
 	float targetVel = 30;
 	float targetAcc = 30;
 	robot.movej(targetPos, targetVel, targetAcc);
 
-	targetPos[3] = 30;
+	targetPos[2] = 0;
 	robot.movej(targetPos, targetVel, targetAcc);
 
 

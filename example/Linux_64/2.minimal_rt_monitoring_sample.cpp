@@ -19,6 +19,9 @@ CDRFLEx robot; // Instance for APIs
 bool get_control_access = false; // Variable to check control authority
 bool is_standby = false; // Variable to check whether the robot state is standby.
 
+#define GREEN  "\033[1;32m"
+#define CYAN   "\033[1;36m"
+
 
 int main(){
 	// Connect to the drcf cotnroller. 
@@ -32,8 +35,39 @@ int main(){
 	// For rt - monitoring, we don't need to have "Getting control access". 
 	// however, for rt-writing like servoj_rt, we still need to have "control access" and "state standby".
 	robot.set_on_rt_monitoring_data([](LPRT_OUTPUT_DATA_LIST data)->void{
-		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
-		std::cout << "[set_on_rt_monitoring_data] Timestamp : (ms since epoch): " << duration.count() << std::endl;
+		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+		printf(GREEN "[%.3f] === Robot State ===\n", ms / 1000.0);
+		printf(CYAN "Joint Position: ");
+		for (int i = 0; i < 6; ++i) {
+			printf("%.3f%s", data->actual_joint_position[i], (i < 5) ? ", " : "\n");
+		}
+		printf(CYAN "Joint Velocity: ");
+		for (int i = 0; i < 6; ++i) {
+			printf("%.3f%s", data->actual_joint_velocity[i], (i < 5) ? ", " : "\n");
+		}
+		printf(CYAN "Joint Torque: ");
+		for (int i = 0; i < 6; ++i) {
+			printf("%.3f%s", data->actual_joint_torque[i], (i < 5) ? ", " : "\n");
+		}
+		printf(CYAN "Gravity Torque: ");
+		for (int i = 0; i < 6; ++i) {
+			printf("%.3f%s", data->gravity_torque[i], (i < 5) ? ", " : "\n");
+		}
+		// Pretty matrix printer
+		auto print_matrix = [](const char* name, float mat[6][6]) {
+			printf(CYAN "%s:\n", name);
+			for (int i = 0; i < 6; ++i) {
+				printf(CYAN "  [");
+				for (int j = 0; j < 6; ++j) {
+					printf(CYAN "%7.3f%s", mat[i][j], (j < 5) ? ", " : "");
+				}
+				printf(CYAN "]\n");
+			}
+		};
+		print_matrix(CYAN "Jacobian Matrix", data->jacobian_matrix);
+		print_matrix(CYAN "Mass Matrix", data->mass_matrix);
+		print_matrix(CYAN "Coriolis Matrix", data->coriolis_matrix);
+
 	});
 	
 	string version = "v1.0";
