@@ -57,19 +57,40 @@ To build the Windows example, utilize the Visual Studio 2015 solution file provi
 
 ### Linux (64-bit)
 
-#### Ubuntu 
+#### Prerequisites
+
+Before building, install the required Poco development libraries:
+
+```bash
+sudo apt-get install libpoco-dev
+```
+
+#### Automated Build Scripts
+
+For easier building and cleaning, you can use the provided automated scripts:
+
+**Build Script Usage:**
+```bash
+./API_DRFL_BUILD.sh
+```
+- Automatically detects Ubuntu version and architecture
+- Scans all .cpp files in `example/Linux_64` directory
+- Allows you to select which file to build (1, 2, 3...)
+- Handles library linking automatically
+- Creates executables in `out/` directory
+- Optionally runs the built executable
+
+**Clean Script Usage:**
+```bash
+./API_DRFL_CLEAN.sh
+```
+- Removes all .o object files
+- Removes the `out/` directory and all executables
+- Asks for confirmation before cleaning
+
+#### Manual Installation 
 
 > Ubuntu supports versions : 18.04, 20.04 and 22.04.
-
-
-
-**✅ Quick Build (Recommended)**
-
-You can use the provided build script to compile the example easily:
-
-    ./API_DRFL_BUILD.sh
-
-**Manual Compile**
 
 1. Navigate to the example directory and compile using g++:
    ```bash
@@ -97,5 +118,28 @@ You can use the provided build script to compile the example easily:
 
 3. Verify the build and, upon completion, proceed with testing the connection to the actual controller.
 
-    ```bash
-    sudo apt-get install libpoco-dev
+## Realtime Command Example Usage
+
+The `6_realtime_control_sample.cpp` provides a streamlined interface for real-time robot control:
+
+### Key Commands:
+- **'s'**: Start complete realtime control sequence (combines initialization, configuration, and execution)
+- **'e'**: Stop and disconnect realtime control
+- **'q'**: Quit program
+
+### Usage Steps:
+1. Compile and run the realtime example
+2. Wait for robot connection and control authority
+3. Press 's' to start realtime control - this will:
+   - Connect RT control
+   - Configure RT control output (v1.0, 1ms period)
+   - Set autonomous mode and start RT control
+   - Create high-priority realtime thread for trajectory execution
+4. Press 'e' to stop realtime control
+5. Press 'q' to exit
+
+### Features:
+- Automated trajectory planning between two joint positions
+- 1ms control loop with real-time thread priority
+- Continuous alternating motion between start and end positions
+- Real-time monitoring and logging capabilities
