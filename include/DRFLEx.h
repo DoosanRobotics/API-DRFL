@@ -62,7 +62,7 @@
 
 // Specified by user. 2 or 3.
 #ifndef DRCF_VERSION
-    #define DRCF_VERSION 2
+    #define DRCF_VERSION 3
 #endif
 
 namespace DRAFramework 
@@ -330,7 +330,7 @@ namespace DRAFramework
 
         // environment adaptive motion
         DRFL_API bool _servoj(LPROBOTCONTROL pCtrl, float fTargetPos[NUM_JOINT], float fLimitVel[NUM_JOINT], float fLimitAcc[NUM_JOINT], float fTargetTime, DR_SERVOJ_TYPE eTargetMod = DR_SERVO_OVERRIDE);
-        DRFL_API bool _servol(LPROBOTCONTROL pCtrl, float fTargetPos[NUM_TASK], float fTargetVel[2], float fTargetAcc[2], float fTargetTime);
+        DRFL_API bool _servol(LPROBOTCONTROL pCtrl, float fTargetPos[NUM_TASK], float fLimitVel[2], float fLimitAcc[2], float fTargetTime);
 
         DRFL_API bool _speedj(LPROBOTCONTROL pCtrl, float fTargetVel[NUM_JOINT], float fTargetAcc[NUM_JOINT], float fTargetTime);
         DRFL_API bool _speedl(LPROBOTCONTROL pCtrl, float fTargetVel[NUM_TASK], float fTargetAcc[2], float fTargetTime);
@@ -391,8 +391,8 @@ namespace DRAFramework
         ////////////////////////////////////////////////////////////////////////////
         //  Flange Serial Operations                                              //
         ////////////////////////////////////////////////////////////////////////////
-        DRFL_API bool _flange_serial_open(LPROBOTCONTROL pCtrl, int baudrate = 115200, BYTE_SIZE eByteSize = BYTE_SIZE_EIGHTBITS, PARITY_CHECK eParity = PARITY_CHECK_NONE, STOP_BITS eStopBits = STOPBITS_ONE);
-        DRFL_API bool _flange_serial_close(LPROBOTCONTROL pCtrl);
+        DRFL_API bool _flange_serial_open(LPROBOTCONTROL pCtrl, int nPort, int baudrate = 115200, BYTE_SIZE eByteSize = BYTE_SIZE_EIGHTBITS, PARITY_CHECK eParity = PARITY_CHECK_NONE, STOP_BITS eStopBits = STOPBITS_ONE);
+        DRFL_API bool _flange_serial_close(LPROBOTCONTROL pCtrl, int nPort);
         DRFL_API bool _flange_serial_write(LPROBOTCONTROL pCtrl, int nSize, char* pSendData, int nPort = 1);
         DRFL_API LPFLANGE_SER_RXD_INFO_EX _flange_serial_read(LPROBOTCONTROL pCtrl, float fTimeout = -1, int nPort = 1);     
   
@@ -550,6 +550,11 @@ namespace DRAFramework
         DRFL_API bool _app_weld_adj_motion_offset(LPROBOTCONTROL pCtrl, float fOffsetY, float fOffsetZ);
         //brief(294) :set_welding_cockpit_setting_time_setting
         DRFL_API void _set_welding_cockpit_setting_time_setting(LPROBOTCONTROL pCtrl, int time);
+        //LED custom setting
+        DRFL_API bool _state_led_reset(LPROBOTCONTROL _rbtCtrl);
+        DRFL_API bool _set_state_led_off(LPROBOTCONTROL _rbtCtrl);
+        DRFL_API bool _set_state_led_color(LPROBOTCONTROL _rbtCtrl, int red, int green, int blue);
+        DRFL_API unsigned char _get_state_led_rule(LPROBOTCONTROL _rbtCtrl);
 
 #ifdef __cplusplus
     };
@@ -804,8 +809,8 @@ namespace DRAFramework
         bool amove_periodic(float fAmplitude[NUM_TASK], float fPeriodic[NUM_TASK], float fAccelTime, unsigned int nRepeat, MOVE_REFERENCE eMoveReference = MOVE_REFERENCE_TOOL) { return _amove_periodic(_rbtCtrl, fAmplitude, fPeriodic, fAccelTime, nRepeat, eMoveReference); };
 		
         // environment adaptive motion
-        bool servoj(float fTargetPos[NUM_JOINT], float fTargetVel[NUM_JOINT], float fTargetAcc[NUM_JOINT], float fTargetTime, DR_SERVOJ_TYPE eTargetMod = DR_SERVO_OVERRIDE){ return _servoj(_rbtCtrl, fTargetPos, fTargetVel, fTargetAcc, fTargetTime, eTargetMod); };
-        bool servol(float fTargetPos[NUM_TASK], float fTargetVel[2], float fTargetAcc[2], float fTargetTime){ return _servol(_rbtCtrl, fTargetPos, fTargetVel, fTargetAcc, fTargetTime); };
+        bool servoj(float fTargetPos[NUM_JOINT], float fLimitVel[NUM_JOINT], float fLimitAcc[NUM_JOINT], float fTargetTime, DR_SERVOJ_TYPE eTargetMod = DR_SERVO_OVERRIDE){ return _servoj(_rbtCtrl, fTargetPos, fLimitVel, fLimitAcc, fTargetTime, eTargetMod); };
+        bool servol(float fTargetPos[NUM_TASK], float fLimitVel[2], float fLimitAcc[2], float fTargetTime){ return _servol(_rbtCtrl, fTargetPos, fLimitVel, fLimitAcc, fTargetTime); };
 
         bool speedj(float fTargetVel[NUM_JOINT], float fTargetAcc[NUM_JOINT], float fTargetTime){ return _speedj(_rbtCtrl, fTargetVel, fTargetAcc, fTargetTime); };
         bool speedl(float fTargetVel[NUM_TASK], float fTargetAcc[2], float fTargetTime){ return _speedl(_rbtCtrl, fTargetVel, fTargetAcc, fTargetTime); };
@@ -867,8 +872,8 @@ namespace DRAFramework
         ////////////////////////////////////////////////////////////////////////////
         //  Flange Serial Operations                                              //
         ////////////////////////////////////////////////////////////////////////////
-        bool flange_serial_open(int baudrate = 115200, BYTE_SIZE eByteSize = BYTE_SIZE_EIGHTBITS, PARITY_CHECK eParity = PARITY_CHECK_NONE, STOP_BITS eStopBits = STOPBITS_ONE){ return _flange_serial_open(_rbtCtrl, baudrate, eByteSize, eParity, eStopBits); };
-        bool flange_serial_close(){ return _flange_serial_close(_rbtCtrl); };
+        bool flange_serial_open(int nPort, int baudrate = 115200, BYTE_SIZE eByteSize = BYTE_SIZE_EIGHTBITS, PARITY_CHECK eParity = PARITY_CHECK_NONE, STOP_BITS eStopBits = STOPBITS_ONE){ return _flange_serial_open(_rbtCtrl, nPort, baudrate, eByteSize, eParity, eStopBits); };
+        bool flange_serial_close(int nPort){ return _flange_serial_close(_rbtCtrl, nPort); };
         bool flange_serial_write(int nSize, char* pSendData, int nPort = 1){ return _flange_serial_write(_rbtCtrl, nSize, pSendData, nPort); };
         LPFLANGE_SER_RXD_INFO_EX flange_serial_read(float fTimeout = -1, int nPort = 1){ return _flange_serial_read(_rbtCtrl, fTimeout, nPort); };      
 
@@ -984,7 +989,13 @@ namespace DRAFramework
         */
         bool setup_monitoring_version(int iVersion) { return _setup_monitoring_version(_rbtCtrl, iVersion); };
         bool system_shut_down() { return _system_shut_down(_rbtCtrl); };
-                ////////////////////////////////////////////////////////////////////////////
+        // LED
+        bool state_led_reset() {return _state_led_reset(_rbtCtrl);};
+        bool set_state_led_off() {return _set_state_led_off(_rbtCtrl);};
+        bool set_state_led_color(int red, int green, int blue) {return _set_state_led_color(_rbtCtrl, red, green, blue);};
+        unsigned char get_state_led_rule() {return _get_state_led_rule(_rbtCtrl);};
+
+        ////////////////////////////////////////////////////////////////////////////
         //  welding                                                //
         ////////////////////////////////////////////////////////////////////////////
 #if DRCF_VERSION == 2
