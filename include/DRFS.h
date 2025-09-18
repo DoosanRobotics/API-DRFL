@@ -55,6 +55,8 @@ using namespace std;
 #pragma pack(1)
 
 #define INFRACORE_PATCH
+#define _FUNC_E_SERIES
+#define _FUNC_AUTO_ACCELERATION
 
 typedef struct _SYSTEM_VERSION
 {
@@ -2258,7 +2260,7 @@ typedef struct _CONFIG_ANALOG_WELDING_INTERFACE
     CONFIG_WELDING_DETAIL_INFO  _tTargetVoltage;
     CONFIG_WELDING_DETAIL_INFO  _tFeedingSpeed;
     CONFIG_WELDING_DETAIL_INFO  _tWeldingVoltage;
-    CONFIG_WELDING_DETAIL_INFO  _tWeldingCurrent;;
+    CONFIG_WELDING_DETAIL_INFO  _tWeldingCurrent;
 
     /* arc on minus: 0~16 */
     unsigned char               _iArcOnDO;
@@ -2433,6 +2435,13 @@ typedef struct _CONFIG_DIGITAL_WELDING_INTERFACE_OTHER
 
 }CONFIG_DIGITAL_WELDING_INTERFACE_OTHER, *LPCONFIG_DIGITAL_WELDING_INTERFACE_OTHER;
 
+typedef struct _ROBOT_LED_CONFIG
+{
+    unsigned char _szLedRule;
+    unsigned char _szStateColor[SAFETY_STATE_LAST][2]; // [][0]: color 1, [][1]: color 2
+    unsigned char _szCommandColor;
+
+} ROBOT_LED_CONFIG, *LPROBOT_LED_CONFIG;
 
 typedef struct _DIGITAL_WELDING_RESET
 {
