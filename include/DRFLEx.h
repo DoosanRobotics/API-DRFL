@@ -555,7 +555,8 @@ namespace DRAFramework
         DRFL_API bool _set_state_led_off(LPROBOTCONTROL _rbtCtrl);
         DRFL_API bool _set_state_led_color(LPROBOTCONTROL _rbtCtrl, int red, int green, int blue);
         DRFL_API unsigned char _get_state_led_rule(LPROBOTCONTROL _rbtCtrl);
-
+        //ADD
+        DRFL_API bool _get_robot_link_info(LPROBOTCONTROL pCtrl,LPROBOT_LINK_INFO pOut,int timeout_ms);
 #ifdef __cplusplus
     };
 #endif
@@ -994,6 +995,8 @@ namespace DRAFramework
         bool set_state_led_off() {return _set_state_led_off(_rbtCtrl);};
         bool set_state_led_color(int red, int green, int blue) {return _set_state_led_color(_rbtCtrl, red, green, blue);};
         unsigned char get_state_led_rule() {return _get_state_led_rule(_rbtCtrl);};
+        //ADD 
+        bool get_robot_link_info(ROBOT_LINK_INFO& out, int timeout_ms = 300) {return _get_robot_link_info(_rbtCtrl, &out, timeout_ms); }; 
 
         ////////////////////////////////////////////////////////////////////////////
         //  welding                                                //
@@ -1051,7 +1054,6 @@ namespace DRAFramework
         bool app_weld_adj_motion_offset(float fOffsetY, float fOffsetZ) { return _app_weld_adj_motion_offset(_rbtCtrl, fOffsetY, fOffsetZ); };
         //brief(294) :set_welding_cockpit_setting_time_setting
         void set_welding_cockpit_setting_time_setting(int time) { return _set_welding_cockpit_setting_time_setting(_rbtCtrl, time); };
-
 #endif
 
 protected:

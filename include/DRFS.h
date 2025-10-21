@@ -3508,6 +3508,16 @@ typedef struct _SAFETY_CONFIGURATION_EX2_V3
 
 } SAFETY_CONFIGURATION_EX2_V3, *LPSAFETY_CONFIGURATION_EX2_V3;
 
-
+// ADD
+typedef struct _ROBOT_LINK_INFO 
+{
+    float d[6];       // meter
+    float a[6];       // meter
+    float alpha[6];   // rad
+    float theta[6];   // rad (mechanical reference)
+    float offset[6];  // rad (homingOffset)
+    float gradient;   // base install gradient
+    float rotation;   // base install rotation    
+} ROBOT_LINK_INFO, *LPROBOT_LINK_INFO;
 
 #pragma pack()

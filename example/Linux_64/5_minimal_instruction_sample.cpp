@@ -87,7 +87,7 @@ void OnHommingCompleted() {
 }
 
 void OnProgramStopped(const PROGRAM_STOP_CAUSE) {
-  Drfl.PlayDrlStop(STOP_TYPE_SLOW);
+  Drfl.drl_stop();
   // 50msec �̳� �۾��� ������ ��.
   // assert(Drfl.SetRobotMode(ROBOT_MODE_MANUAL));
   cout << "program stopped" << endl;
@@ -123,7 +123,7 @@ void OnMonitoringCtrlIOCB(const LPMONITORING_CTRLIO pData) {
   }
 }
 
-void OnMonitoringCtrlIOExCB(const LPMONITORING_CTRLIO_EX pData) {
+void OnMonitoringCtrlIOExCB(const LPMONITORING_CTRLIO_EX2 pData) {
   return;
   cout << "# monitoring ctrl 1 data" << endl;
   for (int i = 0; i < 16; i++) {
@@ -192,7 +192,7 @@ void OnMonitroingAccessControlCB(
 
   switch (eTrasnsitControl) {
     case MONITORING_ACCESS_CONTROL_REQUEST:
-      assert(Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_RESPONSE_NO));
+      assert(Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_RESPONSE_YES));
       // Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_RESPONSE_YES);
       break;
     case MONITORING_ACCESS_CONTROL_GRANT:
@@ -293,9 +293,9 @@ uint32_t ThreadFunc(void* arg) {
 }
 
 void OnDisConnected() {
-  // while (!Drfl.open_connection("192.168.137.100")) {
-  //   std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-  // }
+  while (!Drfl.open_connection("127.0.0.1")) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  }
 }
 
 struct PlanParam
@@ -449,7 +449,7 @@ int main(int argc, char** argv) {
       case '2':
           {
               // 연결 수립
-              assert(Drfl.open_connection("192.168.137.100"));
+              assert(Drfl.open_connection("127.0.0.1"));
               std::cout << "Open Connection !! " << std::endl;
           }
           break;
@@ -494,7 +494,7 @@ int main(int argc, char** argv) {
       {
         //로봇 모드 및 시스템 변경
         assert(Drfl.set_robot_mode(ROBOT_MODE_AUTONOMOUS));
-        assert(Drfl.set_robot_system(ROBOT_SYSTEM_REAL));
+        assert(Drfl.set_robot_system(ROBOT_SYSTEM_VIRTUAL));
         std::cout << "Set Auto Mode !!" << std::endl;
       }
 
@@ -529,7 +529,7 @@ int main(int argc, char** argv) {
         // DRL
         string strDrl = "movej([0, 0, 10, 0, 10, 0], 60, 30)\nmovej([0, 0, 0, 0, 0, 0], 60, 30)\n";
         //두 위치를 movej 명령을 통해 이동하는 DRL 스크립트 구현 
-        Drfl.drl_start(ROBOT_SYSTEM_REAL, strDrl); //실제 로봇에서 구동하기 위하여 ROBOT_SYSTEM을 Real로 설정하고, DRL 스크립트 문자열 입력
+        Drfl.drl_start(ROBOT_SYSTEM_VIRTUAL, strDrl); //실제 로봇에서 구동하기 위하여 ROBOT_SYSTEM을 Real로 설정하고, DRL 스크립트 문자열 입력
         Drfl.set_on_program_stopped(OnProgramStopped);
         std::cout << "Sent DRL Script !!" << std::endl;
 		  }
