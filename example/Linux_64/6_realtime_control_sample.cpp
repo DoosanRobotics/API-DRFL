@@ -292,8 +292,8 @@ void* realtime_task(void* arg) {
     const float None = -10000;
     
     // Set safety mode and move to home
-    Drfl.set_safety_mode(SAFETY_MODE_AUTONOMOUS, SAFETY_MODE_EVENT_MOVE);
     Drfl.movej(home, 60, 60);
+    Drfl.set_safety_mode(SAFETY_MODE_AUTONOMOUS, SAFETY_MODE_EVENT_MOVE);
     
     // Motion parameters
     float target_time = 8.0;
@@ -402,7 +402,7 @@ int main(int argc, char** argv) {
     Drfl.set_on_homming_completed(OnHommingCompleted);
     Drfl.set_on_monitoring_data(OnMonitoringDataCB);
     Drfl.set_on_monitoring_data_ex(OnMonitoringDataExCB);
-    Drfl.set_on_monitoring_ctrl_io_ex(OnMonitoringCtrlIOExCB);
+    //Drfl.set_on_monitoring_ctrl_io_ex(OnMonitoringCtrlIOExCB);
     Drfl.set_on_monitoring_access_control(OnMonitroingAccessControlCB);
     Drfl.set_on_tp_initializing_completed(OnTpInitializingCompleted);
     Drfl.set_on_log_alarm(OnLogAlarm);
@@ -425,8 +425,9 @@ int main(int argc, char** argv) {
     cout << "Library version: " << Drfl.get_library_version() << endl;
     
     // Wait for robot to be ready
-    while ((Drfl.get_robot_state() != STATE_STANDBY) || !g_bHasControlAuthority) {
+    while (!g_bHasControlAuthority) {
         this_thread::sleep_for(std::chrono::milliseconds(1000));
+        Drfl.set_robot_control(CONTROL_SERVO_ON);
     }
     
     cout << "Robot state: " << Drfl.get_robot_state() << endl;
@@ -496,7 +497,7 @@ int main(int argc, char** argv) {
                 cout << "Starting realtime control sequence..." << endl;
                 
                 // Step 1: Connect RT control
-                Drfl.connect_rt_control();
+                Drfl.connect_rt_control("192.168.137.100");
                 cout << "RT control connected" << endl;
                 
                 // Step 2: Set RT control output
@@ -513,8 +514,6 @@ int main(int argc, char** argv) {
                 Drfl.start_rt_control();
                 cout << "RT control started" << endl;
                 std::this_thread::sleep_for(std::chrono::microseconds(1000));
-                
-                // Step 4: Create realtime thread
                 pthread_t rt_thread;
                 pthread_attr_t attr;
                 struct sched_param param;
@@ -533,8 +532,7 @@ int main(int argc, char** argv) {
                 }
                 cout << "Realtime thread created successfully" << endl;
                 break;
-            }
-            
+            }            
             case 'e':
                 Drfl.stop_rt_control();
                 Drfl.disconnect_rt_control();
