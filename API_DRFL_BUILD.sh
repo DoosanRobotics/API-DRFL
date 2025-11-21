@@ -115,7 +115,7 @@ echo "Executable $EXE_NAME created successfully in the out/ directory."
 read -p "Do you want to run $EXE_NAME now? (y/n): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    "$EXE_PATH"
+    sudo "$EXE_PATH"
 else
     echo "Execution skipped."
 fi
