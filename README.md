@@ -13,7 +13,7 @@
 
 This document outlines the procedure for building the DRFL on Windows and Linux platforms. For detailed instructions, please refer to the official manual linked below:
 
-[DRFL Manual](https://manual.doosanrobotics.com/en/api/)
+[Official Doosan Robotics API Manual](https://doosanrobotics.github.io/doosan-robotics-api-manual/GL013301/index.html)
 
 ## DRCF Version Compatibility
 

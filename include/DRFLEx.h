@@ -491,6 +491,8 @@ namespace DRAFramework
         DRFL_API bool _disable_alter_motion(LPROBOTCONTROL pCtrl);
         DRFL_API bool _alter_motion(LPROBOTCONTROL pCtrl, float fTargetPos[NUM_TASK]);
         DRFL_API bool _set_singularity_handling(LPROBOTCONTROL pCtrl, SINGULARITY_AVOIDANCE eMode);
+        //Add
+        DRFL_API bool _set_singular_handling_force(LPROBOTCONTROL pCtrl, SINGULARITY_FORCE_HANDLING eMode);
         DRFL_API bool _config_program_watch_variable(LPROBOTCONTROL pCtrl, VARIABLE_TYPE eDivision, DATA_TYPE eType, const char* szName, const char* szData);
         DRFL_API bool _save_sub_program(LPROBOTCONTROL pCtrl, int iTargetType, const char* szFileName, const char* lpszTextString);
         DRFL_API bool _setup_monitoring_version(LPROBOTCONTROL pCtrl, int iVersion);
@@ -555,7 +557,7 @@ namespace DRAFramework
         DRFL_API bool _set_state_led_off(LPROBOTCONTROL _rbtCtrl);
         DRFL_API bool _set_state_led_color(LPROBOTCONTROL _rbtCtrl, int red, int green, int blue);
         DRFL_API unsigned char _get_state_led_rule(LPROBOTCONTROL _rbtCtrl);
-        //ADD
+        //Link Info
         DRFL_API bool _get_robot_link_info(LPROBOTCONTROL pCtrl,LPROBOT_LINK_INFO pOut,int timeout_ms);
 #ifdef __cplusplus
     };
@@ -980,7 +982,9 @@ namespace DRAFramework
         bool enable_alter_motion(int iCycleTime, PATH_MODE ePathMode, COORDINATE_SYSTEM eTargetRef, float fLimitDpos[2], float fLimitDposPer[2]) { return _enable_alter_motion(_rbtCtrl, iCycleTime, ePathMode, eTargetRef, fLimitDpos, fLimitDposPer); };
         bool disable_alter_motion() { return _disable_alter_motion(_rbtCtrl); };
         bool alter_motion(float fTargetPos[NUM_TASK]) { return _alter_motion(_rbtCtrl, fTargetPos); };
-        bool set_singularity_handling(SINGULARITY_AVOIDANCE eMode) { return _set_singularity_handling(_rbtCtrl, eMode); };
+        bool set_singularity_handling(SINGULARITY_AVOIDANCE eMode) { return _set_singularity_handling(_rbtCtrl, eMode); }; 
+        // Add set_singular handling_force
+        bool set_singular_handling_force(SINGULARITY_FORCE_HANDLING eMode) { return _set_singular_handling_force(_rbtCtrl, eMode); };
         bool config_program_watch_variable(VARIABLE_TYPE eDivision, DATA_TYPE eType, string strName, string strData) { return _config_program_watch_variable(_rbtCtrl, eDivision, eType, strName.c_str(), strData.c_str()); };
         bool save_sub_program(int iTargetType, string strFileName, string strDrlProgram) { return _save_sub_program(_rbtCtrl, iTargetType, strFileName.c_str(), strDrlProgram.c_str()); };
         
@@ -995,7 +999,7 @@ namespace DRAFramework
         bool set_state_led_off() {return _set_state_led_off(_rbtCtrl);};
         bool set_state_led_color(int red, int green, int blue) {return _set_state_led_color(_rbtCtrl, red, green, blue);};
         unsigned char get_state_led_rule() {return _get_state_led_rule(_rbtCtrl);};
-        //ADD 
+        // Link Info
         bool get_robot_link_info(ROBOT_LINK_INFO& out, int timeout_ms = 300) {return _get_robot_link_info(_rbtCtrl, &out, timeout_ms); }; 
 
         ////////////////////////////////////////////////////////////////////////////
