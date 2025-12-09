@@ -6,6 +6,7 @@
 #include <thread>
 #include <cstring>
 #include <ctime>
+#include <atomic>
 
 #include <iostream>
 #include <cstring>
@@ -17,7 +18,6 @@
 #include "../../include/DRFLEx.h"
 #include "util.hpp"
 
-
 const std::string IP_ADDRESS = "192.168.137.100";
 
 using namespace DRAFramework;
@@ -26,6 +26,8 @@ CDRFLEx robot;
 bool g_bHasControlAuthority = FALSE;
 bool g_TpInitailizingComplted = FALSE;
 bool control_authority_granted = false;
+static std::atomic<bool> g_run{true}; 
+
 
 // void OnTpInitializingCompleted() {
 //   // Tp 초기화 이후 제어권 요청.
@@ -129,10 +131,83 @@ void OnMonitoringDataExCB(const LPMONITORING_DATA_EX pData) {
 void OnMonitoringCrtlIoExCB(const LPMONITORING_CTRLIO_EX pData) {
   // cout << "OnMonitoringDataExCB"<<std::endl;
 }
-/*
-1. move 연속으로 했을 때 수행되지 않음. 
-2. mwait 모션 수행하지 않음 -> amovej 이동 및 mwait 이용.
-*/
+
+// force singular mode
+static const char* to_str(SINGULARITY_FORCE_HANDLING m)
+{
+    switch (m) {
+    case SINGULARITY_ERROR:  return "SINGULARITY_ERROR (error & stop)";
+    case SINGULARITY_IGNORE: return "SINGULARITY_IGNORE (ignore error)";
+    default:                 return "UNKNOWN";
+    }
+}
+
+// Ctrl+C
+static void SigHandler(int){ g_run = false; }
+
+// ===== Force-Control 테스트 함수 =====
+static void run_force_singularity_test(CDRFLEx& robot, SINGULARITY_FORCE_HANDLING mode)
+{
+    std::cout << "\n=== run_force_singularity_test (" << to_str(mode) << ") ===\n";
+
+    // 0) 특이점 force 예외 처리 모드 설정
+    bool ok_bool = robot.set_singular_handling_force(mode);
+    std::cout << "set_singular_handling_force -> " << (ok_bool ? "OK" : "FAIL") << std::endl;
+    if (!ok_bool) return;
+
+    // TOOL 기준으로 force 제어 수행
+    int ret = robot.set_ref_coord(COORDINATE_SYSTEM_TOOL);
+    std::cout << "set_ref_coord(COORDINATE_SYSTEM_TOOL) -> "
+              << (ret == 1 ? "OK" : "FAIL") << std::endl;
+
+    // 특이점 근처 자세 (예시 값, 실제 로봇에 맞게 조정 가능)
+    float q_sing[6] = {0.0f, -40.0f, 80.0f, 0.0f, 40.0f, 0.0f};
+    std::cout << "[INFO] movej to near-singular pose (slow)...\n";
+    robot.movej(q_sing, 30.0f, 30.0f);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    // 컴플라이언스 시작 (stiffness)
+    float stx[6] = {300.f, 300.f, 300.f, 20.f, 20.f, 20.f};
+    ret = robot.task_compliance_ctrl(stx);
+    std::cout << "task_compliance_ctrl -> " << (ret == 1 ? "OK" : "FAIL") << std::endl;
+    if (ret != 1) return;
+
+    // 원하는 힘/축 설정 (예시: Z- 방향으로 5N)
+    float fd[6]      = {0.f, 0.f, -5.f, 0.f, 0.f, 0.f};
+    unsigned char fdir[6] = {0, 0, 1, 0, 0, 0}; // Z축만 force 제어
+
+    ROBOT_STATE cur_state = robot.GetRobotState(); // 또는 get_robot_state()
+    std::cout << "[DEBUG] state before set_desired_force: "
+              << to_str(cur_state) << std::endl;
+
+    ret = robot.set_desired_force(fd, fdir);
+    std::cout << "set_desired_force -> " << (ret == 1 ? "OK" : "FAIL") << std::endl;
+
+    cur_state = robot.GetRobotState();
+    std::cout << "[DEBUG] state after set_desired_force:  "
+              << to_str(cur_state) << std::endl;
+
+    if (ret != 1) {
+        robot.release_compliance_ctrl();
+        return;
+    }
+
+    std::cout << "[INFO] 외력을 주어 특이점 방향으로 살짝 밀어 보세요.\n";
+    std::cout << "       " << to_str(mode) << " 모드에 따라 Fault 발생 여부가 달라집니다.\n";
+
+    for (int i = 0; i < 50 && g_run; ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    // 컴플라이언스 해제
+    ret = robot.release_compliance_ctrl();
+    std::cout << "release_compliance_ctrl -> " << (ret == 1 ? "OK" : "FAIL") << std::endl;
+
+    std::cout << "=== End of Force Test (" << to_str(mode) << ") ===\n";
+}
+
+
+
 int main() {
   bool ret;
   
@@ -161,7 +236,7 @@ int main() {
   robot.set_on_monitoring_data_ex(OnMonitoringDataExCB);
   robot.set_on_monitoring_state(OnMonitoringStateCB);
   robot.set_on_log_alarm(OnLogAlarm);
-  robot.set_on_monitoring_ctrl_io_ex(OnMonitoringCrtlIoExCB);
+  //robot.set_on_monitoring_ctrl_io_ex(OnMonitoringCrtlIoExCB);
   // robot.set_auto_safety_move_stop(true);
   
   
@@ -245,17 +320,47 @@ int main() {
       }
       case '3':
       {
+        bool ok = false;
+
+        std::cout << "\n=== Test: set_singularity_handling (motion) ===\n";
+
+        ok = robot.set_singularity_handling(SINGULARITY_AVOIDANCE_AVOID);
+        std::cout << "set_singularity_handling(AVOID) result: "
+                  << (ok ? "OK" : "FAIL") << std::endl;
+
+        ok = robot.set_singularity_handling(SINGULARITY_AVOIDANCE_STOP);
+        std::cout << "set_singularity_handling(STOP)  result: "
+                  << (ok ? "OK" : "FAIL") << std::endl;
+
+        ok = robot.set_singularity_handling(SINGULARITY_AVOIDANCE_VEL);
+        std::cout << "set_singularity_handling(VEL)   result: "
+                  << (ok ? "OK" : "FAIL") << std::endl;
+
+        std::cout << "\n=== Test: set_singular_handling_force (force/compliance) ===\n";
+
+        SINGULARITY_FORCE_HANDLING mode = SINGULARITY_ERROR;
+        ok = robot.set_singular_handling_force(mode);
+        std::cout << "set_singular_handling_force(" << to_str(mode)
+                  << ") result: " << (ok ? "OK" : "FAIL") << std::endl;
+
+        mode = SINGULARITY_IGNORE;
+        ok = robot.set_singular_handling_force(mode);
+        std::cout << "set_singular_handling_force(" << to_str(mode)
+                  << ") result: " << (ok ? "OK" : "FAIL") << std::endl;
 
         break;
       }
       case '4':
       {
-
+        std::cout << "\n[WARN] 실제 로봇에서 테스트 시 속도/힘을 꼭 낮게 설정하고,"
+                  << " 비상정지 준비한 상태에서 실행하세요.\n";
+        run_force_singularity_test(robot, SINGULARITY_ERROR);
         break;
       }
       case '5':
       {
-
+        std::cout << "\n[INFO] 컨트롤러 Fault 상태가 아니어야 합니다.\n";
+        run_force_singularity_test(robot, SINGULARITY_IGNORE);
         break;
       }
       case '6':
@@ -309,21 +414,20 @@ int main() {
           std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
           robot.del_tool(Symbol);
-
+          break;
       }
       case '9':
       {
           robot.set_robot_mode(ROBOT_MODE_MANUAL);
-
+          break;
       }
       default:
       {
         std::cout << "none option" << std::endl;
+        break;
       }
     }
   }
-
-  
 
   robot.close_connection();
   std::cout << "Connection closed" << std::endl;
