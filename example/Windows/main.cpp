@@ -18,7 +18,7 @@
 #include "util.hpp"
 
 
-const std::string IP_ADDRESS = "192.168.137.100";
+const std::string IP_ADDRESS = "127.0.0.1";
 
 using namespace DRAFramework;
 CDRFLEx robot;
