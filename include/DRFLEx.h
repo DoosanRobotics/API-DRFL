@@ -491,7 +491,6 @@ namespace DRAFramework
         DRFL_API bool _disable_alter_motion(LPROBOTCONTROL pCtrl);
         DRFL_API bool _alter_motion(LPROBOTCONTROL pCtrl, float fTargetPos[NUM_TASK]);
         DRFL_API bool _set_singularity_handling(LPROBOTCONTROL pCtrl, SINGULARITY_AVOIDANCE eMode);
-        //Add
         DRFL_API bool _set_singular_handling_force(LPROBOTCONTROL pCtrl, SINGULARITY_FORCE_HANDLING eMode);
         DRFL_API bool _config_program_watch_variable(LPROBOTCONTROL pCtrl, VARIABLE_TYPE eDivision, DATA_TYPE eType, const char* szName, const char* szData);
         DRFL_API bool _save_sub_program(LPROBOTCONTROL pCtrl, int iTargetType, const char* szFileName, const char* lpszTextString);
