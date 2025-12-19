@@ -1,2 +1,2 @@
-#TargetFrameworkVersion=v4.0:PlatformToolSet=v140:EnableManagedIncrementalBuild=false:VCToolArchitecture=Native32Bit:WindowsTargetPlatformVersion=8.1
-Debug|x64|C:\Users\jinhyuk.gong\API-DRFL\example\Windows\windows_example\|
+PlatformToolSet=v143:VCToolArchitecture=Native64Bit:VCToolsVersion=14.44.35207:TargetPlatformVersion=10.0.26100.0:
+Debug|x64|C:\Users\chanwon.jeong\bitbucket\drfl-example\example\Windows\windows_example\|
