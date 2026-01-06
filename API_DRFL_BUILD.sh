@@ -65,19 +65,15 @@ echo "Compiled successfully to $OBJ_FILE."
 # Set the correct library path based on Ubuntu version and architecture
 LIBRARY_PATH="../../library/Linux/64bits"
 if [[ "$ARCHITECTURE" == "x86_64" ]]; then
-    if [[ "$UBUNTU_VERSION" == "18.04" ]]; then
-        LIBRARY_PATH+="/amd64/18.04"
-    elif [[ "$UBUNTU_VERSION" == "20.04" || "$UBUNTU_VERSION" == "22.04" ]]; then
+    if [[ "$UBUNTU_VERSION" == "18.04" || "$UBUNTU_VERSION" == "20.04" || "$UBUNTU_VERSION" == "22.04" || "$UBUNTU_VERSION" == "24.04" ]]; then
         LIBRARY_PATH+="/amd64/${UBUNTU_VERSION}"
     else
         echo "Unsupported Ubuntu version for x86_64."
         exit 1
     fi
 elif [[ "$ARCHITECTURE" == "aarch64" ]]; then
-    if [[ "$UBUNTU_VERSION" == "18.04" ]]; then
-        LIBRARY_PATH+="/arn64/18.04"
-    elif [[ "$UBUNTU_VERSION" == "20.04" || "$UBUNTU_VERSION" == "22.04" ]]; then
-        LIBRARY_PATH+="/arn64/${UBUNTU_VERSION}"
+    if [[ "$UBUNTU_VERSION" == "18.04" || "$UBUNTU_VERSION" == "20.04" || "$UBUNTU_VERSION" == "22.04" || "$UBUNTU_VERSION" == "24.04" ]]; then
+        LIBRARY_PATH+="/arm64/${UBUNTU_VERSION}"
     else
         echo "Unsupported Ubuntu version for arm64."
         exit 1
