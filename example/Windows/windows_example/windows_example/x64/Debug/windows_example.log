@@ -1,6 +1,0 @@
-﻿  main.cpp
-C:\Users\chanwon.jeong\bitbucket\drfl-example\include\DRFS.h(1656,1): warning C4819: The file contains a character that cannot be represented in the current code page (949). Save the file in Unicode format to prevent data loss
-  (compiling source file '../../main.cpp')
-  
-C:\Users\chanwon.jeong\bitbucket\drfl-example\example\Windows\main.cpp(352,40): warning C4101: 'check_safety': unreferenced local variable
-  windows_example.vcxproj -> C:\Users\chanwon.jeong\bitbucket\drfl-example\example\Windows\windows_example\x64\Debug\windows_example.exe

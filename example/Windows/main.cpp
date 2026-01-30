@@ -1,31 +1,19 @@
+#include <atomic>
 #include <chrono>
+#include <cmath>
+#include <iomanip>
 #include <iostream>
-#include <ostream>
 #include <string>
 #include <thread>
-#include <cstring>
-#include <ctime>
-#include <atomic>
 
-#include <iostream>
-#include <cstring>
-
-
-
-//
 // Specify drfl header.
 #include "../../include/DRFLEx.h"
 #include "util.hpp"
 
-
-const std::string IP_ADDRESS = "127.0.0.1";
+const std::string IP_ADDRESS = "192.168.137.100";
 
 using namespace DRAFramework;
 CDRFLEx robot;
-
-bool g_bHasControlAuthority = FALSE;
-bool g_TpInitailizingComplted = FALSE;
-bool control_authority_granted = false;
 
 static std::atomic<bool> g_run{ true };
 static std::atomic<bool> g_got_access{ false };
@@ -34,33 +22,40 @@ static std::atomic<bool> g_poll_run{ false };
 
 MONITORING_ACCESS_CONTROL control_access = MONITORING_ACCESS_CONTROL_LAST;
 
+static void log_msg(const char* tag, const std::string& msg)
+{
+    std::cout << "[" << tag << "] " << msg << std::endl;
+}
+
 void OnMonitoringStateCB(const ROBOT_STATE eState) {
 
-    std::cout << "[USER][OnMonitoringStateCB] state : " << to_str(eState) << std::endl;
+    static std::atomic<int> last_state{ -1 };
+    const int next = static_cast<int>(eState);
+    if (last_state.exchange(next) != next) {
+        log_msg("STATE", std::string("state: ") + to_str(eState));
+    }
+    g_is_standby = (eState == STATE_STANDBY);
     return;
 }
 
 void OnMonitroingAccessControlCB(
     const MONITORING_ACCESS_CONTROL eTrasnsitControl) {
 
-    std::cout << "[OnMonitroingAccessControlCB] : " << to_str(eTrasnsitControl) << std::endl;
+    static std::atomic<int> last_access{ -1 };
+    const int next = static_cast<int>(eTrasnsitControl);
+    if (last_access.exchange(next) != next) {
+        log_msg("ACCESS", std::string("status: ") + to_str(eTrasnsitControl));
+    }
     control_access = eTrasnsitControl;
+    g_got_access = (eTrasnsitControl == MONITORING_ACCESS_CONTROL_GRANT);
     return;
 }
 
 void OnLogAlarm(LPLOG_ALARM tLog) {
-    cout << "Alarm Info: "
+    std::cout << "[ALARM] "
         << "group(" << (unsigned int)tLog->_iGroup << "), index("
         << tLog->_iIndex << "), param(" << tLog->_szParam[0] << "), param("
-        << tLog->_szParam[1] << "), param(" << tLog->_szParam[2] << ")" << endl;
-}
-
-void OnMonitoringDataExCB(const LPMONITORING_DATA_EX pData) {
-    //cout << "OnMonitoringDataExCB"<<std::endl;
-}
-
-void OnMonitoringDataExCB2(const LPMONITORING_CTRLIO_EX2 pData) {
-    //cout << "OnMonitoringDataExCB2"<<std::endl;
+        << tLog->_szParam[1] << "), param(" << tLog->_szParam[2] << ")" << std::endl;
 }
 
 static const char* to_str(SINGULARITY_FORCE_HANDLING m)
@@ -104,10 +99,10 @@ static void run_force_singularity_test(CDRFLEx& robot, SINGULARITY_FORCE_HANDLIN
     float fd[6] = { 0.f, 0.f, -5.0f, 0.f, 0.f, 0.f };
     unsigned char fdir[6] = { 0, 0, 1, 0, 0, 0 }; // Only Z axis
 
-    ROBOT_STATE cur_state = robot.GetRobotState(); 
+    ROBOT_STATE cur_state = robot.GetRobotState();
     std::cout << "[DEBUG] state before set_desired_force: "
         << to_str(cur_state) << std::endl;
-    
+
     ret = robot.set_desired_force(fd, fdir);
     std::cout << "set_desired_force -> " << (ret == 1 ? "OK" : "FAIL") << std::endl;
 
@@ -136,30 +131,28 @@ static void OnAccessCB(MONITORING_ACCESS_CONTROL ac)
     std::cout << "[Access] " << to_str(ac) << std::endl;
     g_got_access = (ac == MONITORING_ACCESS_CONTROL_GRANT);
 }
-static void OnStateCB(ROBOT_STATE st)
+
+static void print6(const char* tag, const float v[6])
 {
-    std::cout << "[State ] " << to_str(st) << std::endl;
-    g_is_standby = (st == STATE_STANDBY);
+    std::cout << tag << ": "
+        << std::fixed << std::setprecision(6)
+        << v[0] << " " << v[1] << " " << v[2] << " "
+        << v[3] << " " << v[4] << " " << v[5] << std::endl;
 }
 
-static void print6(const char* tag, const float v[6]) 
+static void print_link(const ROBOT_LINK_INFO& x, const char* title)
 {
-    std::printf("%s: %.6f %.6f %.6f %.6f %.6f %.6f\n",
-        tag, v[0], v[1], v[2], v[3], v[4], v[5]);
-}
-
-static void print_link(const ROBOT_LINK_INFO& x, const char* title) 
-{
-    std::puts(title);
+    std::cout << title << std::endl;
     print6("a[m]      ", x.a);
     print6("d[m]      ", x.d);
     print6("alpha[rad]", x.alpha);
     print6("theta[rad]", x.theta);
     print6("offset[rad]", x.offset);
-    std::printf("gradient: %.6f, rotation: %.6f\n\n", x.gradient, x.rotation);
+    std::cout << "gradient: " << std::fixed << std::setprecision(6) << x.gradient
+        << ", rotation: " << x.rotation << std::endl << std::endl;
 }
 
-static bool neq6(const float a[6], const float b[6], float eps = 1e-7f) 
+static bool neq6(const float a[6], const float b[6], float eps = 1e-7f)
 {
     for (int i = 0; i < 6; ++i) if (std::fabs(a[i] - b[i]) > eps) return true;
     return false;
@@ -186,10 +179,17 @@ static void dh_poll_thread(CDRFLEx* pRobot) {
             }
         }
         else {
-            std::fprintf(stderr, "[WARN] get_robot_link_info timeout/fail\n");
+            std::cout << "[WARN] get_robot_link_info timeout/fail" << std::endl;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
+}
+
+static void print_menu()
+{
+    std::cout << "[MENU] 0:init 1:joint move 2:dh query 3:force err "
+        "4:force ignore 5:emg stop 6:tool add/del 7:h2r test 8:reg test q:quit"
+        << std::endl;
 }
 
 
@@ -198,52 +198,67 @@ int main() {
 
     ret = robot.open_connection(IP_ADDRESS);
     if (true != ret) {
-        std::cout << "Cannot open connection to robot @ " << IP_ADDRESS
-            << std::endl;
+        log_msg("BOOT", std::string("connect: FAIL (") + IP_ADDRESS + ")");
         return 1;
     }
+    log_msg("BOOT", std::string("connect: OK (") + IP_ADDRESS + ")");
 
     if (true != robot.setup_monitoring_version(1)) {
-        std::cout << "Cannot set monitoring version " << std::endl;
+        log_msg("BOOT", "monitoring version: FAIL (v1)");
         return 1;
     }
-    std::cout << "Set setup_monitoring_version done" << std::endl;
+    log_msg("BOOT", "monitoring version: OK (v1)");
 
-    robot.set_on_monitoring_data_ex(OnMonitoringDataExCB);
     robot.set_on_monitoring_state(OnMonitoringStateCB);
     robot.set_on_log_alarm(OnLogAlarm);
-    robot.set_on_monitoring_ctrl_io_ex(OnMonitoringDataExCB2);
 
     // Manage Access Control seems to mean accessing monitoring data in controller.
     robot.set_on_monitoring_access_control(OnMonitroingAccessControlCB);
     if (true != robot.ManageAccessControl(MANAGE_ACCESS_CONTROL_FORCE_REQUEST)) {
-        std::cout << "Cannot set ManageAccessControl - MANAGE_ACCESS_CONTROL_FORCE_REQUEST " << std::endl;
+        log_msg("BOOT", "access: REQUEST FAIL");
         return 1;
     }
 
     while (control_access != MONITORING_ACCESS_CONTROL_GRANT) {
-        std::cout << "Sleep until control grant... " << std::endl;
+        log_msg("BOOT", "access: waiting for grant...");
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
-    std::cout << "Control Granted ! " << std::endl;
+    log_msg("BOOT", "access: GRANTED");
+
+    for (size_t retry = 0; retry < 10; ++retry) {
+        if (!g_got_access.load()) {
+            robot.ManageAccessControl(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
+        }
+        if (!g_is_standby.load()) {
+            robot.SetRobotControl(CONTROL_SERVO_ON);
+        }
+        if (g_got_access.load() && g_is_standby.load()) break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    }
+    if (!(g_got_access.load() && g_is_standby.load())) {
+        log_msg("BOOT", "access/standby: FAIL");
+        return 1;
+    }
 
     ROBOT_STATE robot_state = robot.GetRobotState();
-    std::cout << "Robot State : " << to_str(robot_state) << std::endl;
+    log_msg("BOOT", std::string("robot state: ") + to_str(robot_state));
     robot.set_robot_mode(ROBOT_MODE_AUTONOMOUS);
     //robot.set_robot_mode(ROBOT_MODE_MANUAL);
 
     if (robot_state == STATE_SAFE_OFF) {
         if (true != robot.SetRobotControl(CONTROL_SERVO_ON)) {
-            std::cout << "SetRobotControl(Servo On) failure " << std::endl;
+            log_msg("BOOT", "servo on: FAIL");
             return 1;
         }
-        std::cout << "SetRobotControl(Servo On) done " << std::endl;
+        log_msg("BOOT", "servo on: OK");
     }
 
-    while (true) {
-        cout << "READY TO INPUT : " << endl;
+    bool running = true;
+    while (running) {
+        log_msg("READY", "input mode (enter a menu key)");
+        print_menu();
         char input;
-        cin >> input;
+        std::cin >> input;
         switch (input) {
         case '0': // Initialize robot: set REAL system, autonomous mode, and servo ON
         {
@@ -302,32 +317,21 @@ int main() {
 
             break;
         }
-        case '3': // Test task-space singularity handling modes
-        {
-            bool ok;
-            ok = robot.set_singularity_handling(SINGULARITY_AVOIDANCE_AVOID);
-            std::cout << "set_singularity_handling(AVOID) -> " << (ok ? "OK" : "FAIL") << "\n";
-            ok = robot.set_singularity_handling(SINGULARITY_AVOIDANCE_STOP);
-            std::cout << "set_singularity_handling(STOP)  -> " << (ok ? "OK" : "FAIL") << "\n";
-            ok = robot.set_singularity_handling(SINGULARITY_AVOIDANCE_VEL);
-            std::cout << "set_singularity_handling(VEL)   -> " << (ok ? "OK" : "FAIL") << "\n";
-            break;
-        }
-        case '4': // Force control test near singularity (ERROR mode)
+        case '3': // Force control test near singularity (ERROR mode)
         {
             bool ok = robot.set_singular_handling_force(SINGULARITY_ERROR);
             std::cout << "set_singular_handling_force(ERROR) -> " << (ok ? "OK" : "FAIL") << "\n";
             run_force_singularity_test(robot, SINGULARITY_ERROR);
             break;
         }
-        case '5': // Force control test near singularity (IGNORE mode)
+        case '4': // Force control test near singularity (IGNORE mode)
         {
             bool ok = robot.set_singular_handling_force(SINGULARITY_IGNORE);
             std::cout << "set_singular_handling_force(IGNORE) -> " << (ok ? "OK" : "FAIL") << "\n";
             run_force_singularity_test(robot, SINGULARITY_IGNORE);
             break;
         }
-        case '6': // Emergency stop and recovery sequence
+        case '5': // Emergency stop and recovery sequence
         {
             robot.MoveStop(STOP_TYPE_QUICK_STO);
             robot.SetRobotControl(CONTROL_RECOVERY_SAFE_OFF);
@@ -342,7 +346,7 @@ int main() {
             robot.SetRobotControl(CONTROL_SERVO_ON);
             break;
         }
-        case '7': // Add and remove tool payload dynamically
+        case '6': // Add and remove tool payload dynamically
         {
             std::string Symbol;
             float Weight;
@@ -365,9 +369,128 @@ int main() {
             std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
             robot.del_tool(Symbol);
+            break;
         }
-        case '8': // (Reserved)
+        case '7': // Hold-to-run test APIs
         {
+            bool ok = robot.hold2run();
+            if (ok) {
+                std::cout << "hold2run -> OK" << std::endl;
+            }
+            else {
+                std::cout << "hold2run -> FAIL" << std::endl;
+            }
+
+            ok = robot.jog_h2r(JOG_AXIS_JOINT_1, MOVE_REFERENCE_BASE, 5.0f);
+            if (ok) {
+                std::cout << "jog_h2r(J1, BASE, 5.0) -> OK" << std::endl;
+            }
+            else {
+                std::cout << "jog_h2r(J1, BASE, 5.0) -> FAIL" << std::endl;
+            }
+
+            float jpos[NUM_JOINT] = { 0.f, 0.f, 10.f, 0.f, 0.f, 0.f };
+            float jvel[NUM_JOINT] = { 30.f, 30.f, 30.f, 30.f, 30.f, 30.f };
+            float jacc[NUM_JOINT] = { 30.f, 30.f, 30.f, 30.f, 30.f, 30.f };
+            ok = robot.movej_h2r(jpos, jvel, jacc);
+            if (ok) {
+                std::cout << "movej_h2r -> OK" << std::endl;
+            }
+            else {
+                std::cout << "movej_h2r -> FAIL" << std::endl;
+            }
+
+            float tpos[NUM_TASK] = { 0.f, 0.f, 10.f, 0.f, 0.f, 0.f };
+            float tvel[2] = { 30.f, 30.f };
+            float tacc[2] = { 30.f, 30.f };
+            ok = robot.movel_h2r(tpos, tvel, tacc);
+            if (ok) {
+                std::cout << "movel_h2r -> OK" << std::endl;
+            }
+            else {
+                std::cout << "movel_h2r -> FAIL" << std::endl;
+            }
+            break;
+        }
+        case '8': // Register set/get test
+        {
+            unsigned short addr_bit = -1;
+            unsigned short addr_int = 0;
+            unsigned short addr_float = 0;
+
+            bool ok = robot.set_output_register_bit(addr_bit, 1);
+            if (ok) {
+                std::cout << "set_output_register_bit -> OK" << std::endl;
+            }
+            else {
+                std::cout << "set_output_register_bit -> FAIL" << std::endl;
+            }
+            ok = robot.set_output_register_int(addr_int, 1);
+            if (ok) {
+                std::cout << "set_output_register_int -> OK" << std::endl;
+            }
+            else {
+                std::cout << "set_output_register_int -> FAIL" << std::endl;
+            }
+            ok = robot.set_output_register_float(addr_float, 1.00f);
+            if (ok) {
+                std::cout << "set_output_register_float -> OK" << std::endl;
+            }
+            else {
+                std::cout << "set_output_register_float -> FAIL" << std::endl;
+            }
+
+            int out_bit = -1;
+            int out_int = 0;
+            float out_float = 0.f;
+            ok = robot.get_output_register_bit(addr_bit, out_bit);
+            if (ok) {
+                std::cout << "get_output_register_bit -> OK val=" << out_bit << std::endl;
+            }
+            else {
+                std::cout << "get_output_register_bit -> FAIL val=" << out_bit << std::endl;
+            }
+            ok = robot.get_output_register_int(addr_int, out_int);
+            if (ok) {
+                std::cout << "get_output_register_int -> OK val=" << out_int << std::endl;
+            }
+            else {
+                std::cout << "get_output_register_int -> FAIL val=" << out_int << std::endl;
+            }
+            ok = robot.get_output_register_float(addr_float, out_float);
+            if (ok) {
+                std::cout << "get_output_register_float -> OK val=" << out_float << std::endl;
+            }
+            else {
+                std::cout << "get_output_register_float -> FAIL val=" << out_float << std::endl;
+            }
+
+            ok = robot.get_input_register_bit(addr_bit, out_bit);
+            if (ok) {
+                std::cout << "get_input_register_bit -> OK val=" << out_bit << std::endl;
+            }
+            else {
+                std::cout << "get_input_register_bit -> FAIL val=" << out_bit << std::endl;
+            }
+            ok = robot.get_input_register_int(addr_int, out_int);
+            if (ok) {
+                std::cout << "get_input_register_int -> OK val=" << out_int << std::endl;
+            }
+            else {
+                std::cout << "get_input_register_int -> FAIL val=" << out_int << std::endl;
+            }
+            ok = robot.get_input_register_float(addr_float, out_float);
+            if (ok) {
+                std::cout << "get_input_register_float -> OK val=" << out_float << std::endl;
+            }
+            else {
+                std::cout << "get_input_register_float -> FAIL val=" << out_float << std::endl;
+            }
+            break;
+        }
+        case 'q': // Quit
+        {
+            running = false;
             break;
         }
         case '9': // (Reserved)
@@ -376,7 +499,7 @@ int main() {
         }
         default:
         {
-            std::cout << "none option" << std::endl;
+            std::cout << "unknown option" << std::endl;
             break;
         }
         }
