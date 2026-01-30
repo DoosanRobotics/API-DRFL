@@ -10,7 +10,7 @@
 #include "../../include/DRFLEx.h"
 #include "util.hpp"
 
-const std::string IP_ADDRESS = "127.0.0.1";
+const std::string IP_ADDRESS = "192.168.137.100";
 
 using namespace DRAFramework;
 CDRFLEx robot;
@@ -195,7 +195,7 @@ static void print_menu()
 
 int main() {
     bool ret;
-    std::cout << "FAILFAILFAILFAIL" << std::endl;
+
     ret = robot.open_connection(IP_ADDRESS);
     if (true != ret) {
         log_msg("BOOT", std::string("connect: FAIL (") + IP_ADDRESS + ")");
