@@ -36,6 +36,7 @@ TEST*.xml
 Thumbs.db
 .vs/
 example/Windows/windows_example/windows_example/x64/Debug/windows_example.tlog/
+example/Windows/windows_example/windows_example/x86/Debug/windows_example.tlog/
 
 # Applications
 *.app
