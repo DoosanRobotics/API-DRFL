@@ -71,10 +71,15 @@
 	<PropertyGroup Label="UserMacros" />
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
 		<LinkIncremental>true</LinkIncremental>
+		<TargetName>example</TargetName>
+		<OutDir>$(ProjectDir)..\x86\$(Configuration)\</OutDir>
+		<IntDir>$(ProjectDir)x86\$(Configuration)\</IntDir>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
 		<LinkIncremental>true</LinkIncremental>
 		<TargetName>example</TargetName>
+		<OutDir>$(ProjectDir)..\x64\$(Configuration)\</OutDir>
+		<LocalDebuggerWorkingDirectory>$(OutDir)</LocalDebuggerWorkingDirectory>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
 		<LinkIncremental>false</LinkIncremental>
@@ -95,6 +100,8 @@
 		<Link>
 			<SubSystem>Console</SubSystem>
 			<GenerateDebugInformation>true</GenerateDebugInformation>
+			<AdditionalLibraryDirectories>../../../../library/Windows/32bits</AdditionalLibraryDirectories>
+			<AdditionalDependencies>DRFLWin32.lib;%(AdditionalDependencies)</AdditionalDependencies>
 		</Link>
 	</ItemDefinitionGroup>
 	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
