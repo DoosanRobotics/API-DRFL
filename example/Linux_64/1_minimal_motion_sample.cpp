@@ -13,7 +13,7 @@ using namespace DRAFramework;
  * 
  */
 
-const std::string IP_ADDRESS = "192.168.137.100";
+const std::string IP_ADDRESS = "127.0.0.1";
 CDRFLEx robot; // Instance for APIs
 
 bool get_control_access = false; // Variable to check control authority
@@ -75,7 +75,7 @@ int main(){
 	// We will make sure "getting control access" and "stand_by" state.
 	// This means, being done of "ready to movement".
 	for (size_t retry = 0; retry < 10; ++retry, std::this_thread::sleep_for(std::chrono::milliseconds(1000))) {
-		if(!get_control_access) {
+		if(!get_control_access) { 
 				robot.ManageAccessControl(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
 				continue;
 		}
@@ -92,6 +92,12 @@ int main(){
 		return 1;
 	}
 
+	// 현재 없음 → 추가
+	if(!robot.set_robot_system(ROBOT_SYSTEM_VIRTUAL)) {
+		return 1;
+	}
+
+
 	// In API, we typically set 'ROBOT_MODE_MANUAL' or 'ROBOT_MODE_AUTONOMOUS'.
 	// Generally, user need to specify 'ROBOT_MODE_MANUAL' before setting robot configuration.
 	// and specify 'ROBOT_MODE_AUTONOMOUS' before movements.
@@ -106,9 +112,9 @@ int main(){
 	std::cout << "Press Enter to continue..." ;
 	std::cin.get();  // Waits for user to press Enter
 
-	float targetPos[6] = {0.,0.,10.,0.,0.,0.};
-	float targetVel = 30;
-	float targetAcc = 30;
+	float targetPos[6] = {0.,0.,30.,0.,0.,0.};
+	float targetVel = 50;
+	float targetAcc = 50;
 	robot.movej(targetPos, targetVel, targetAcc);
 
 	targetPos[2] = 0;

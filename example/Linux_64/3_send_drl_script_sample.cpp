@@ -13,7 +13,7 @@ using namespace DRAFramework;
  * 
  */
 
-const std::string IP_ADDRESS = "192.168.137.100";
+const std::string IP_ADDRESS = "127.0.0.1";
 CDRFLEx robot; // Instance for APIs
 
 bool get_control_access = false; // Variable to check control authority
@@ -105,11 +105,11 @@ int main(){
     string strDrl =
     "\r\n\
 loop = 0\r\n\
-while loop < 1003:\r\n\
+while loop < 5:\r\n\
  movej(posj(0,0,90,0,90,0), vel=60, acc=60)\r\n\
  movej(posj(0,0,80,0,90,0), vel=60, acc=60)\r\n\
  loop+=1\r\n";
-    robot.drl_start(ROBOT_SYSTEM_REAL, strDrl);
+    robot.drl_start(ROBOT_SYSTEM_VIRTUAL, strDrl);
     
     std::cout << "Press Enter to pause ..." ;
     std::cin.get();  // Waits for user to press Enter

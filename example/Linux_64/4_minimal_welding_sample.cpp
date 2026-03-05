@@ -7,6 +7,7 @@
 
 #include "../../include/DRFLEx.h"
 using namespace DRAFramework;
+using namespace std::chrono_literals;
 
 #undef NDEBUG
 #include <assert.h>
@@ -18,17 +19,17 @@ bool g_TpInitailizingComplted = FALSE;
 bool moving = FALSE;
 bool bAlterFlag = FALSE;
 
-std::string IP_ADDR = "192.168.137.100";
+std::string IP_ADDR = "127.0.0.1";
 std::string getWeldingSampleDrl();
 
 void OnTpInitializingCompleted() {
-  // Request control authority after TP initialization.
+  // Tp 초기화 이후 제어권 요청.
   g_TpInitailizingComplted = TRUE;
   Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
 }
 
 void OnHommingCompleted() {
-  // Do only work under 50 msec.
+  // 50msec 이내 작업만 수행할 것.
   cout << "homming completed" << endl;
 }
 
@@ -51,7 +52,7 @@ void OnMonitoringCtrlIOExCB(const LPMONITORING_CTRLIO_EX2 pData) {
 
 void OnMonitoringStateCB(const ROBOT_STATE eState) {
 	// std::cout << "monitoring state cb " << std::endl;
-	// // Do only work under 50 msec.
+	// // 50msec 이내 작업만 수행할 것.
   // switch ((unsigned char)eState) {
   //   case STATE_EMERGENCY_STOP:
   //     // popup
@@ -94,11 +95,11 @@ void OnMonitoringStateCB(const ROBOT_STATE eState) {
 
 void OnMonitroingAccessControlCB(
     const MONITORING_ACCESS_CONTROL eTrasnsitControl) {
-  // Do only work under 50 msec.
+  // 50msec 이내 작업만 수행할 것.
   std::cout << "OnMonitroingAccessControlCB !! " << int(eTrasnsitControl) << std::endl;
   switch (eTrasnsitControl) {
     case MONITORING_ACCESS_CONTROL_REQUEST:
-      assert(Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_RESPONSE_NO));
+      assert(Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_RESPONSE_YES));
       // Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_RESPONSE_YES);
       break;
     case MONITORING_ACCESS_CONTROL_GRANT:
@@ -160,7 +161,7 @@ int main(int argc, char** argv) {
   Drfl.set_on_monitoring_data(OnMonitoringDataCB);
   Drfl.set_on_monitoring_data_ex(OnMonitoringDataExCB);
   Drfl.set_on_monitoring_ctrl_io(OnMonitoringCtrlIOCB);
-  // Drfl.set_on_monitoring_ctrl_io_ex(OnMonitoringCtrlIOExCB);
+  Drfl.set_on_monitoring_ctrl_io_ex(OnMonitoringCtrlIOExCB);
   Drfl.set_on_monitoring_state(OnMonitoringStateCB);
   Drfl.set_on_monitoring_access_control(OnMonitroingAccessControlCB);
   Drfl.set_on_tp_initializing_completed(OnTpInitializingCompleted);
@@ -196,7 +197,7 @@ int main(int argc, char** argv) {
 
   std::cout << "set robot mode ret : " << Drfl.set_robot_mode(ROBOT_MODE_AUTONOMOUS) << std::endl;
 
-
+  Drfl.set_robot_system(ROBOT_SYSTEM_VIRTUAL);
   while (true) {
     cout << "\ninput key : ";
     char ch;
@@ -205,7 +206,7 @@ int main(int argc, char** argv) {
       case '0':
       {
         // drl sample.
-        Drfl.drl_start(ROBOT_SYSTEM_REAL, getWeldingSampleDrl());
+        Drfl.drl_start(ROBOT_SYSTEM_VIRTUAL, getWeldingSampleDrl());
       }
       break;
       case '1':
@@ -222,14 +223,14 @@ int main(int argc, char** argv) {
 
         // Refer to drl Sample Code.
         Drfl.set_singularity_handling(SINGULARITY_AVOIDANCE_AVOID);
-        unsigned char dry_run = 1; // (flag_dry_run: real welding(0) / simulation(1))
-        unsigned char weld_con_adj = 1; // Whether to adjust welding conditions (apply conditions set in app_weld_set_weld_cond_analog(1) / apply adjustment values(0))
+        unsigned char dry_run = 1; // (flag_dry_run: 실용접(0) / 모의용접(1))
+        unsigned char weld_con_adj = 1; // 용접 조건 조정 여부 설정(app_weld_set_weld_cond_analog에서 설정한 조건 적용(1) / 조정값 적용(0))
 
         float velx[2] = { 250.0, 80.625 };
         float accx[2] = { 1000., 322.5 };
         float g_op_speed = 100;
         Drfl.set_robot_mode(ROBOT_MODE_AUTONOMOUS);
-        // Preset TCP for EWM welder: Welding_Torch(0, 200, 300, 90, 67.5, 0)
+        // 사전 TCP 설정 : EWM 용접기 기준 Welding_Torch(0, 200, 300, 90, 67.5, 0)
         if (Drfl.get_tcp() != "Welding Torch")
           Drfl.set_tcp("Welding Torch");
         this_thread::sleep_for(200ms);
@@ -340,9 +341,9 @@ int main(int argc, char** argv) {
 
         this_thread::sleep_for(1000ms);
 
-        // Weaving condition setting (flag_dry_run: real welding(0) / simulation(1))
+        // 위징 조건 설정(flag_dry_run: 실용접(0) / 모의용접(1))
 
-        CONFIG_TRAPEZOID_WEAVING_SETTING weaving_trap = { //Weaving_trap settings
+        CONFIG_TRAPEZOID_WEAVING_SETTING weaving_trap = { //Weaving_trap 설정
           0.f,
           0.f,
           0.f,
@@ -382,6 +383,7 @@ int main(int argc, char** argv) {
         float welding_accx[2] = { 70,70 };
         Drfl.amovel(target_wel_posx, welding_velx, welding_accx, 0, MOVE_MODE_ABSOLUTE, MOVE_REFERENCE_BASE, BLENDING_SPEED_TYPE_DUPLICATE, DR_MV_APP_WELD);
         Drfl.mwait();
+        break;
       }
       case '2':{
         
@@ -406,9 +408,9 @@ set_accj(100.0)
 set_velx(250.0, 80.625, DR_OFF)
 set_accx(1000.0, 322.5)
 
-dry_run = 1 # (flag_dry_run: real welding(0) / simulation(1))
-weld_con_adj = 1 # Whether to adjust welding conditions (apply conditions set in app_weld_set_weld_cond_digital(1) / apply adjustment values(0))
-arc_sensing_test = False # Arc Sensing test flag (True: run Arc Sensing DRL / False: skip Arc Sensing DRL)
+dry_run = 1 # (flag_dry_run: 실용접(0) / 모의용접(1))
+weld_con_adj = 1 # 용접 조건 조정 여부 설정 (app_weld_set_weld_cond_digital에서 설정한 조건 적용(1) / 조정값 적용(0))
+arc_sensing_test = False # Arc Sensing 시험을 위한 설정 (True: Arc Sensing 관련 DRL 실행 / False: Arc Sensing 관련 DRL 패스)
 
 
 app_weld_set_interface_eip_r2m_process(welding_start=[1,0,0,0,4,0,1,0,0], robot_ready=[1,0,0,0,5,0,1,0,0], error_reset=[1,0,0,1,4,0,1,0,0])

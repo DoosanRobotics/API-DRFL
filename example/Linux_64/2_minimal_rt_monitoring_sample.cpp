@@ -13,7 +13,7 @@ using namespace DRAFramework;
  * 
  */
 
-const std::string IP_ADDRESS = "192.168.137.100";
+const std::string IP_ADDRESS = "127.0.0.1";
 CDRFLEx robot; // Instance for APIs
 
 bool get_control_access = false; // Variable to check control authority
@@ -35,6 +35,7 @@ int main(){
 	// For rt - monitoring, we don't need to have "Getting control access". 
 	// however, for rt-writing like servoj_rt, we still need to have "control access" and "state standby".
 	robot.set_on_rt_monitoring_data([](LPRT_OUTPUT_DATA_LIST data)->void{
+		if (!data) return;
 		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		printf(GREEN "[%.3f] === Robot State ===\n", ms / 1000.0);
 		printf(CYAN "Joint Position: ");
@@ -71,9 +72,10 @@ int main(){
 	});
 	
 	string version = "v1.0";
-	float period = 0.002;
+	// float period = 0.002;
+	float hz = 100.0f;
 	int losscount = 4;
-	std::cout << "RT Result " << robot.set_rt_control_output(version, period, losscount) << std::endl;
+	std::cout << "RT Result " << robot.set_rt_control_input(version, hz, losscount) << std::endl;
 
 	std::cout << "Press Enter to continue..." ;
 	std::cin.get();  // Waits for user to press Enter

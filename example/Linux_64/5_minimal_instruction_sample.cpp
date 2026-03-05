@@ -133,54 +133,11 @@ void OnMonitoringCtrlIOExCB(const LPMONITORING_CTRLIO_EX2 pData) {
 
 void OnMonitoringStateCB(const ROBOT_STATE eState) {
   // Do only work under 50 msec.
-  switch ((unsigned char)eState) {
-#if 0  // TP initialization sample (standalone, etc.). See the TP manual.
-       // Standalone mode, etc.)
-    case STATE_NOT_READY:
-        if (g_bHasControlAuthority) Drfl.SetRobotControl(CONTROL_INIT_CONFIG);
-        break;
-    case STATE_INITIALIZING:
-        // add initalizing logic
-        if (g_bHasControlAuthority) Drfl.SetRobotControl(CONTROL_ENABLE_OPERATION);
-        break;
-#endif
-    case STATE_EMERGENCY_STOP:
-      // popup
-      break;
-    case STATE_STANDBY:
-    case STATE_MOVING:
-    case STATE_TEACHING:
-      break;
-    case STATE_SAFE_STOP:
-      if (g_bHasControlAuthority) {
-        Drfl.SetSafeStopResetType(SAFE_STOP_RESET_TYPE_DEFAULT);
-        Drfl.SetRobotControl(CONTROL_RESET_SAFET_STOP);
-      }
-      break;
-    case STATE_SAFE_OFF:
-      // cout << "STATE_SAFE_OFF1" << endl;
-      if (g_bHasControlAuthority) {
-        // cout << "STATE_SAFE_OFF2" << endl;
-        Drfl.SetRobotControl(CONTROL_SERVO_ON);
-      }
-      break;
-    case STATE_SAFE_STOP2:
-      if (g_bHasControlAuthority)
-        Drfl.SetRobotControl(CONTROL_RECOVERY_SAFE_STOP);
-      break;
-    case STATE_SAFE_OFF2:
-      if (g_bHasControlAuthority) {
-        Drfl.SetRobotControl(CONTROL_RECOVERY_SAFE_OFF);
-      }
-      break;
-    case STATE_RECOVERY:
-      // Drfl.SetRobotControl(CONTROL_RESET_RECOVERY);
-      break;
-    default:
-      break;
-  }
-  return;
-  cout << "current state: " << (int)eState << endl;
+  // WARNING: Do NOT call blocking APIs (SetRobotControl, etc.) from this callback.
+  // This callback runs on the library's run() thread. Blocking APIs wait for responses
+  // processed by the same thread, causing a deadlock.
+  // State recovery is handled in the main thread (e.g., key '4' while loop).
+  cout << "\n>> State changed: " << (int)eState << endl;
 }
 
 void OnMonitroingAccessControlCB(
@@ -414,7 +371,7 @@ int main(int argc, char** argv) {
         if (ch == '7') ch = '0';
         else if (ch == '0') ch = '7';
 #else
-    cout << "\ninput key : ";
+    cout << "\n\033[1;33minput key : \033[0m";
     // char ch = _getch();
     char ch;
     cin >> ch;
@@ -432,8 +389,8 @@ int main(int argc, char** argv) {
               Drfl.set_on_monitoring_data_ex(OnMonitoringDataExCB);
               Drfl.set_on_monitoring_ctrl_io_ex(OnMonitoringCtrlIOExCB);
               Drfl.set_on_log_alarm(OnLogAlarm);
-              Drfl.set_on_disconnected(OnDisConnected);
-              // Drfl.set_on_monitoring_state(OnMonitoringStateCB);
+              // Drfl.set_on_disconnected(OnDisConnected);
+              Drfl.set_on_monitoring_state(OnMonitoringStateCB);
               // Drfl.set_on_tp_initializing_completed(OnTpInitializingCompleted);
               // Drfl.set_on_tp_popup(OnTpPopup);
               // Drfl.set_on_tp_log(OnTpLog);
@@ -446,43 +403,118 @@ int main(int argc, char** argv) {
       case '2':
           {
               // Establish connection
-              assert(Drfl.open_connection("192.168.137.100"));
+              assert(Drfl.open_connection("127.0.0.1"));
               std::cout << "Open Connection !! " << std::endl;
           }
           break;
       case '3':
       {
-          //Acquire control authority
-        // Drfl.set_on_monitoring_access_control(OnMonitroingAccessControlCB);
-        Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
-        // Drfl.set_on_monitoring_access_control(OnMonitroingAccessControlCB);
+          //Acquire control authority - register callback BEFORE sending request
         Drfl.set_on_monitoring_access_control([](const MONITORING_ACCESS_CONTROL eTrasnsitControl)
           {
             if(MONITORING_ACCESS_CONTROL_GRANT == eTrasnsitControl) {
               g_bHasControlAuthority = TRUE;
-              std::cout << "Successfully got Control Authority !! " << std::endl;
+              std::cout << "\nSuccessfully got Control Authority !! " << std::endl;
             }else {
               std::cout << "Unintended autority.. " << std::endl;
             }
           }
         );
 
+        // FORCE_REQUEST goes through server's async message queue (SendMessageToRC),
+        // which can be delayed if the server is processing previous disconnect events.
+        // Retry once if the first attempt doesn't get GRANT within 5 seconds.
+        g_bHasControlAuthority = FALSE;
+        Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
         std::cout << "Try to get Control Authority !!" << std::endl;
+
+        for (int i = 0; i < 50; i++) {
+            if (g_bHasControlAuthority) break;
+            this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        if (!g_bHasControlAuthority) {
+            // Retry once - server may have been busy processing previous disconnect
+            Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
+            std::cout << "Retrying..." << std::endl;
+            for (int i = 0; i < 50; i++) {
+                if (g_bHasControlAuthority) break;
+                this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+        }
+        if (!g_bHasControlAuthority) {
+            std::cout << "Failed to get Control Authority." << std::endl;
+        }
       }
       break;
       case '4':
 		  {
-          // Turn servo on and set monitoring version          
+          if (!g_bHasControlAuthority) {
+              std::cout << "No control authority. Run step 3 first." << std::endl;
+              break;
+          }
+          // Turn servo on and set monitoring version
           Drfl.setup_monitoring_version(1);
-          Drfl.set_robot_control(CONTROL_SERVO_ON);
           Drfl.set_digital_output(GPIO_CTRLBOX_DIGITAL_INDEX_10, TRUE);
           SYSTEM_VERSION tSysVerion = {'\0',};
           Drfl.get_system_version(&tSysVerion);
           cout << "System version: " << tSysVerion._szController << endl;
           cout << "Library version: " << Drfl.get_library_version() << endl;
-          while ((Drfl.get_robot_state() != STATE_STANDBY) || !g_bHasControlAuthority)
-              this_thread::sleep_for(std::chrono::milliseconds(1000));
-          std::cout << "Servo On !! " << std::endl;
+
+          Drfl.set_robot_control(CONTROL_SERVO_ON);
+
+          int nRetryCount = 0;
+          ROBOT_STATE ePrevState = STATE_LAST;
+          int nSameStateCount = 0;
+          const int RETRY_INTERVAL = 10; // retry every 10*500ms = 5 seconds
+          while ((Drfl.get_robot_state() != STATE_STANDBY) || !g_bHasControlAuthority) {
+              ROBOT_STATE eState = Drfl.get_robot_state();
+              bool bSendCommand = false;
+              if (eState != ePrevState) {
+                  ePrevState = eState;
+                  nSameStateCount = 0;
+                  bSendCommand = true;
+              } else if (++nSameStateCount >= RETRY_INTERVAL) {
+                  nSameStateCount = 0;
+                  bSendCommand = true;
+              }
+              if (bSendCommand) {
+                  switch ((unsigned char)eState) {
+                    case STATE_SAFE_STOP:
+                      cout << ">> Recovery: SAFE_STOP -> resetting..." << endl;
+                      Drfl.SetSafeStopResetType(SAFE_STOP_RESET_TYPE_DEFAULT);
+                      Drfl.SetRobotControl(CONTROL_RESET_SAFET_STOP);
+                      break;
+                    case STATE_SAFE_OFF:
+                      cout << ">> Recovery: SAFE_OFF -> servo on..." << endl;
+                      Drfl.SetRobotControl(CONTROL_SERVO_ON);
+                      break;
+                    case STATE_SAFE_STOP2:
+                      cout << ">> Recovery: SAFE_STOP2 -> recovering..." << endl;
+                      Drfl.SetRobotControl(CONTROL_RECOVERY_SAFE_STOP);
+                      break;
+                    case STATE_SAFE_OFF2:
+                      cout << ">> Recovery: SAFE_OFF2 -> recovering..." << endl;
+                      Drfl.SetRobotControl(CONTROL_RECOVERY_SAFE_OFF);
+                      break;
+                    case STATE_NOT_READY:
+                      cout << ">> Recovery: NOT_READY -> servo on..." << endl;
+                      Drfl.SetRobotControl(CONTROL_SERVO_ON);
+                      break;
+                    default:
+                      cout << ">> Unknown state: " << (int)eState << endl;
+                      break;
+                  }
+              }
+              this_thread::sleep_for(std::chrono::milliseconds(500));
+              if (++nRetryCount > 20) { // 10 second timeout
+                  cout << ">> Timeout waiting for STANDBY (state=" << (int)eState << ")" << endl;
+                  break;
+              }
+          }
+          if (Drfl.get_robot_state() == STATE_STANDBY && g_bHasControlAuthority)
+              std::cout << "Servo On !! " << std::endl;
+          else
+              std::cout << "Failed to reach STANDBY state." << std::endl;
 		  }
       break;
       case '5':
@@ -498,31 +530,63 @@ int main(int argc, char** argv) {
       {
         //Execute motion
         std::cout << "Move Start !!  " << std::endl;
-        float p1[6] = {0, 0, 10, 0, 10, 0};
+        float p1[6] = {0, 0, -90, 0, 90, 0};
         Drfl.movej(p1, 60, 30);  // Move to posj(0,0,10,0,10,0) with v=60, a=30
-        float p2[6] = {0, 0, 0, 0, 0, 0};
-        Drfl.movej(p2, 30, 30); // Move back to posj(0,0,0,0,0,0) with v=30, a=30
+        // float p2[6] = {0, 0, 9, 0, 90, 0};
+        // Drfl.movej(p2, 30, 30); // Move back to posj(0,0,0,0,0,0) with v=30, a=30
         //You cannot specify only selected parameters; even when using time, you must provide velocity and acceleration first.
         std::cout << "Move End !!  " << std::endl;	
+        LPROBOT_POSE pCur = Drfl.get_current_pose();
+        std::cout << " Current Pose : "
+                  << pCur->_fPosition[0] << ", "
+                  << pCur->_fPosition[1] << ", "
+                  << pCur->_fPosition[2] << ", "
+                  << pCur->_fPosition[3] << ", "
+                  << pCur->_fPosition[4] << ", "
+                  << pCur->_fPosition[5] << std::endl;
       } break;
       case '7': 
 		  {
         // Motion using kinematics functions
         float x1[6] = {370.9, 719.7, 651.5, 90, -180, 0}; //Task-space pose for ikin conversion
-        LPROBOT_POSE res = Drfl.ikin(x1, 2); //ROBOT_POSE holds float[6] elements.
+        float fIterThreshold[2] = {0.005, 0.01};
+        LPROBOT_POSE res = Drfl.ikin(x1, 255); //ROBOT_POSE holds float[6] elements.
         //Store the ikin result (shallow copy)
         float q1[6] = {0,};
         for(int i=0; i<6; i++){
             q1[i] = res->_fPosition[i]; //Read elements from LPROBOT_POSE (return value)
         }
         std::cout << " Get ikin Success (Task Space -> Joint Space) !! " << std::endl;
+        std::cout << " Joint Values [q1]: "
+                  << q1[0] << ", "
+                  << q1[1] << ", "
+                  << q1[2] << ", "
+                  << q1[3] << ", "
+                  << q1[4] << ", "
+                  << q1[5] << std::endl;
+        this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        LPINVERSE_KINEMATIC_RESPONSE res2 = Drfl.ikin_norm(x1, 255, COORDINATE_SYSTEM_BASE, 0); //ROBOT_POSE holds float[6] elements.
+        //Store the ikin_norm result (shallow copy)
+        float q2[6] = {0,};
+        for(int i=0; i<6; i++){
+            q2[i] = res2->_fTargetPos[i]; //Read elements from LPROBOT_POSE (return value)
+        }
+        std::cout << " Get ikin_norm Success (Task Space -> Joint Space) !! " << std::endl;
+        std::cout << " Joint Values [q2]: "
+                  << q2[0] << ", "
+                  << q2[1] << ", "
+                  << q2[2] << ", "
+                  << q2[3] << ", "
+                  << q2[4] << ", "
+                  << q2[5] << std::endl;
         // Drfl.movej(q1, 60, 30);
 		  }
 		  break;
       case '8': 
 		  {
         // DRL
-        string strDrl = "movej([0, 0, 10, 0, 10, 0], 60, 30)\nmovej([0, 0, 0, 0, 0, 0], 60, 30)\n";
+        string strDrl = "movej([0, 0, 10, 0, 10, 0], 60, 30)\nmovej([10, 20, 30, 40, 50, 60], 60, 30)\n";
         //DRL script to move between two positions using movej
         Drfl.drl_start(ROBOT_SYSTEM_REAL, strDrl); //Set ROBOT_SYSTEM to VIRTUAL for a virtual robot, and pass the DRL script
         Drfl.set_on_program_stopped(OnProgramStopped);
@@ -531,7 +595,14 @@ int main(int argc, char** argv) {
 		  break;
       case '9': 
 		  {
-
+        LPROBOT_POSE pCur = Drfl.get_current_pose();
+        std::cout << " Current Pose : "
+                  << pCur->_fPosition[0] << ", "
+                  << pCur->_fPosition[1] << ", "
+                  << pCur->_fPosition[2] << ", "
+                  << pCur->_fPosition[3] << ", "
+                  << pCur->_fPosition[4] << ", "
+                  << pCur->_fPosition[5] << std::endl;
 		  }
 		  break;
       default:
