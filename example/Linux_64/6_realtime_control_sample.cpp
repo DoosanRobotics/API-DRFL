@@ -23,7 +23,6 @@
 #include <sched.h>
 #include <csignal>
 #include <regex>
-#include <assert.h>
 
 #include "../../include/DRFLEx.h"
 using namespace DRAFramework;
@@ -44,8 +43,8 @@ string strDrl =
     "\r\n\
 loop = 0\r\n\
 while loop < 1003:\r\n\
- movej(posj(10,10.10,10,10.10), vel=60, acc=60)\r\n\
- movej(posj(00,00.00,00,00.00), vel=60, acc=60)\r\n\
+ movej(posj(10,10,10,10,10,10), vel=60, acc=60)\r\n\
+ movej(posj(0,0,0,0,0,0), vel=60, acc=60)\r\n\
  loop+=1\r\n";
 
 // ============================================================================
@@ -172,7 +171,7 @@ void TrajectoryGenerator(PlanParam *plan, TraParam *tra) {
 // ============================================================================
 void OnTpInitializingCompleted() {
     g_TpInitailizingComplted = true;
-    Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
+    Drfl.manage_access_control(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
 }
 
 void OnHommingCompleted() {
@@ -180,7 +179,7 @@ void OnHommingCompleted() {
 }
 
 void OnProgramStopped(const PROGRAM_STOP_CAUSE) {
-    assert(Drfl.PlayDrlStop(STOP_TYPE_SLOW));
+    // The program has already stopped; PlayDrlStop() here would wait on this callback thread.
     cout << "Program stopped" << endl;
 }
 
@@ -192,14 +191,19 @@ void OnMonitoringDataExCB(const LPMONITORING_DATA_EX pData) {
     return;
 }
 
+#if DRCF_VERSION == 2
 void OnMonitoringCtrlIOExCB(const LPMONITORING_CTRLIO_EX pData) {
+#else
+void OnMonitoringCtrlIOExCB(const LPMONITORING_CTRLIO_EX2 pData) {
+#endif
     return;
 }
 
 void OnMonitroingAccessControlCB(const MONITORING_ACCESS_CONTROL eTrasnsitControl) {
     switch (eTrasnsitControl) {
         case MONITORING_ACCESS_CONTROL_REQUEST:
-            assert(Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_RESPONSE_NO));
+            if (!Drfl.manage_access_control(MANAGE_ACCESS_CONTROL_RESPONSE_NO))
+                cout << "manage_access_control failed" << endl;
             break;
         case MONITORING_ACCESS_CONTROL_GRANT:
             g_bHasControlAuthority = true;
@@ -208,7 +212,7 @@ void OnMonitroingAccessControlCB(const MONITORING_ACCESS_CONTROL eTrasnsitContro
         case MONITORING_ACCESS_CONTROL_LOSS:
             g_bHasControlAuthority = false;
             if (g_TpInitailizingComplted) {
-                Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
+                Drfl.manage_access_control(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
             }
             break;
         default:
@@ -263,15 +267,15 @@ uint32_t ThreadFunc(void* arg) {
                 case 's':
                     printf("Stop!\n");
                     g_Stop = true;
-                    Drfl.MoveStop(STOP_TYPE_SLOW);
+                    Drfl.stop(STOP_TYPE_SLOW);
                     break;
                 case 'p':
                     printf("Pause!\n");
-                    Drfl.MovePause();
+                    Drfl.move_pause();
                     break;
                 case 'r':
                     printf("Resume!\n");
-                    Drfl.MoveResume();
+                    Drfl.move_resume();
                     break;
             }
         }
@@ -415,11 +419,18 @@ int main(int argc, char** argv) {
     Drfl.set_on_disconnected(OnDisConnected);
     
     // Connect to robot
-    assert(Drfl.open_connection("192.168.137.100"));
+    if (!Drfl.open_connection("192.168.137.100")) {
+        cout << "open_connection failed" << endl;
+        return 1;
+    }
     
     SYSTEM_VERSION tSysVerion = {'\0'};
     Drfl.get_system_version(&tSysVerion);
-    assert(Drfl.setup_monitoring_version(1));
+    if (!Drfl.setup_monitoring_version(1)) {
+        cout << "setup_monitoring_version failed" << endl;
+        Drfl.close_connection();
+        return 1;
+    }
     
     cout << "System version: " << tSysVerion._szController << endl;
     cout << "Library version: " << Drfl.get_library_version() << endl;
@@ -432,8 +443,11 @@ int main(int argc, char** argv) {
     cout << "Robot state: " << Drfl.get_robot_state() << endl;
     cout << "API control authority: " << g_bHasControlAuthority << endl;
     
-    assert(Drfl.set_robot_mode(ROBOT_MODE_AUTONOMOUS));
-    assert(Drfl.set_robot_system(ROBOT_SYSTEM_REAL));
+    if (!Drfl.set_robot_mode(ROBOT_MODE_AUTONOMOUS) || !Drfl.set_robot_system(ROBOT_SYSTEM_REAL)) {
+        cout << "Setting Auto mode failed" << endl;
+        Drfl.close_connection();
+        return 1;
+    }
     
     // Example types
     typedef enum {
@@ -496,21 +510,30 @@ int main(int argc, char** argv) {
                 cout << "Starting realtime control sequence..." << endl;
                 
                 // Step 1: Connect RT control
-                Drfl.connect_rt_control();
+                if (!Drfl.connect_rt_control()) {
+                    cout << "RT control connection failed" << endl;
+                    break;
+                }
                 cout << "RT control connected" << endl;
                 
                 // Step 2: Set RT control output
                 string version = "v1.0";
                 float period = 0.001;
                 int losscount = 4;
-                Drfl.set_rt_control_output(version, period, losscount);
+                if (!Drfl.set_rt_control_output(version, period, losscount)) {
+                    cout << "RT control output configuration failed" << endl;
+                    break;
+                }
                 cout << "RT control output configured" << endl;
                 std::this_thread::sleep_for(std::chrono::microseconds(1000));
                 
                 // Step 3: Set robot mode and start RT control
                 Drfl.set_robot_mode(ROBOT_MODE_AUTONOMOUS);
                 Drfl.set_safety_mode(SAFETY_MODE_AUTONOMOUS, SAFETY_MODE_EVENT_MOVE);
-                Drfl.start_rt_control();
+                if (!Drfl.start_rt_control()) {
+                    cout << "RT control start failed" << endl;
+                    break;
+                }
                 cout << "RT control started" << endl;
                 std::this_thread::sleep_for(std::chrono::microseconds(1000));
                 
@@ -549,7 +572,7 @@ int main(int argc, char** argv) {
     
     // Cleanup
     Drfl.disconnect_rt_control();
-    Drfl.CloseConnection();
+    Drfl.close_connection();
     
 #ifdef __XENO__
     rt_task_join(&sub_task);

@@ -1,4 +1,6 @@
-#define DRCF_VERSION 2 // Set 2 or 3 according to drcf version.
+#ifndef DRCF_VERSION
+#define DRCF_VERSION 2 // Set 2 or 3 according to drcf version, or pass -DDRCF_VERSION=3.
+#endif
 
 #include "../../include/DRFLEx.h"
 
@@ -76,7 +78,7 @@ int main(){
 	// This means, being done of "ready to movement".
 	for (size_t retry = 0; retry < 10; ++retry, std::this_thread::sleep_for(std::chrono::milliseconds(1000))) {
 		if(!get_control_access) {
-				robot.ManageAccessControl(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
+				robot.manage_access_control(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
 				continue;
 		}
 		if(!is_standby) {

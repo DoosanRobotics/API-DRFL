@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <chrono>
 #include <cmath>
+#include <mutex>
 
 using namespace DRAFramework;
 
@@ -16,6 +17,7 @@ using namespace DRAFramework;
 static std::atomic<bool> g_got_access{false};
 static std::atomic<bool> g_is_standby{false};
 static std::atomic<bool> g_poll_run{false};  // 폴링 스레드 on/off
+static std::mutex g_link_mtx;  // get_robot_link_info uses one shared reply buffer in the library
 
 // ===== 도우미 출력/비교 함수 =====
 static std::string to_str(const MONITORING_ACCESS_CONTROL x)
@@ -64,6 +66,11 @@ static bool neq6(const float a[6], const float b[6], float eps=1e-7f){
     return false;
 }
 
+static bool query_link(CDRFLEx& robot, ROBOT_LINK_INFO& out, int timeout_ms){
+    std::lock_guard<std::mutex> lock(g_link_mtx);
+    return robot.get_robot_link_info(out, timeout_ms);
+}
+
 // ===== 콜백 (캡처 없음 → 함수포인터로 OK) =====
 static void OnAccessCB(MONITORING_ACCESS_CONTROL ac)
 {
@@ -83,7 +90,7 @@ static void dh_poll_thread(CDRFLEx* pRobot){
 
     while(g_poll_run.load()){
         ROBOT_LINK_INFO cur{};
-        if (pRobot->get_robot_link_info(cur, 300)) {
+        if (query_link(*pRobot, cur, 300)) {
             if (!has_prev ||
                 neq6(prev.a,cur.a) || neq6(prev.d,cur.d) ||
                 neq6(prev.alpha,cur.alpha) || neq6(prev.theta,cur.theta) ||
@@ -125,7 +132,7 @@ int main()
 
     // 제어권/대기상태 확보
     for (int i = 0; i < 10; ++i) {
-        if (!g_got_access) robot.ManageAccessControl(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
+        if (!g_got_access) robot.manage_access_control(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
         if (!g_is_standby) robot.set_robot_control(CONTROL_SERVO_ON);
         if (g_got_access && g_is_standby) break;
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -141,7 +148,7 @@ int main()
 
     // ===== 시작 스냅샷 + 폴링 시작 =====
     ROBOT_LINK_INFO link{};
-    if (robot.get_robot_link_info(link, 500))
+    if (query_link(robot, link, 500))
         print_link(link, "=== DH at START ===");
     else
         std::fprintf(stderr, "[ERR] initial get_robot_link_info failed\n");
@@ -153,18 +160,18 @@ int main()
     float q[6] = {0,0,30,0,0,0};
 
     // Move #1
-    if (robot.get_robot_link_info(link, 500))
+    if (query_link(robot, link, 500))
         print_link(link, "[Before move #1]");
     robot.movej(q, 50, 50);
-    if (robot.get_robot_link_info(link, 500))
+    if (query_link(robot, link, 500))
         print_link(link, "[After  move #1]");
 
     // Move #2
     q[2] = 0;
-    if (robot.get_robot_link_info(link, 500))
+    if (query_link(robot, link, 500))
         print_link(link, "[Before move #2]");
     robot.movej(q, 50, 50);
-    if (robot.get_robot_link_info(link, 500))
+    if (query_link(robot, link, 500))
         print_link(link, "[After  move #2]");
 
     // ===== 폴링 종료 =====

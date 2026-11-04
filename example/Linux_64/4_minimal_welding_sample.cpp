@@ -5,12 +5,17 @@
 #include <termios.h>
 #include <unistd.h>
 
+// The welding API used in this sample exists only for DRCF 2.
+#ifndef DRCF_VERSION
+#define DRCF_VERSION 2
+#endif
+#if DRCF_VERSION != 2
+#error "4_minimal_welding_sample.cpp uses the welding API, which is available only with DRCF_VERSION 2"
+#endif
 #include "../../include/DRFLEx.h"
 using namespace DRAFramework;
 using namespace std::chrono_literals;
 
-#undef NDEBUG
-#include <assert.h>
 
 
 CDRFLEx Drfl;
@@ -25,7 +30,7 @@ std::string getWeldingSampleDrl();
 void OnTpInitializingCompleted() {
   // Tp 초기화 이후 제어권 요청.
   g_TpInitailizingComplted = TRUE;
-  Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
+  Drfl.manage_access_control(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
 }
 
 void OnHommingCompleted() {
@@ -46,7 +51,7 @@ void OnMonitoringDataExCB(const LPMONITORING_DATA_EX pData) {
 void OnMonitoringCtrlIOCB(const LPMONITORING_CTRLIO pData) {
 }
 
-void OnMonitoringCtrlIOExCB(const LPMONITORING_CTRLIO_EX2 pData) {
+void OnMonitoringCtrlIOExCB(const LPMONITORING_CTRLIO_EX pData) {
 
 }
 
@@ -63,29 +68,29 @@ void OnMonitoringStateCB(const ROBOT_STATE eState) {
   //     break;
   //   case STATE_SAFE_STOP:
   //     if (g_bHasControlAuthority) {
-  //       Drfl.SetSafeStopResetType(SAFE_STOP_RESET_TYPE_DEFAULT);
-  //       Drfl.SetRobotControl(CONTROL_RESET_SAFET_STOP);
+  //       Drfl.set_safe_stop_reset_type(SAFE_STOP_RESET_TYPE_DEFAULT);
+  //       Drfl.set_robot_control(CONTROL_RESET_SAFET_STOP);
   //     }
   //     break;
   //   case STATE_SAFE_OFF:
   //     cout << "STATE_SAFE_OFF1" << endl;
   //     if (g_bHasControlAuthority) {
   //       cout << "STATE_SAFE_OFF2" << endl;
-  //       std::cout << "servo on  : " <<Drfl.SetRobotControl(CONTROL_SERVO_ON) << std::endl;
+  //       std::cout << "servo on  : " <<Drfl.set_robot_control(CONTROL_SERVO_ON) << std::endl;
   //       cout << "STATE_SAFE_OFF3" << endl;
   //     }
   //     break;
   //   case STATE_SAFE_STOP2:
   //     if (g_bHasControlAuthority)
-  //       Drfl.SetRobotControl(CONTROL_RECOVERY_SAFE_STOP);
+  //       Drfl.set_robot_control(CONTROL_RECOVERY_SAFE_STOP);
   //     break;
   //   case STATE_SAFE_OFF2:
   //     if (g_bHasControlAuthority) {
-  //       Drfl.SetRobotControl(CONTROL_RECOVERY_SAFE_OFF);
+  //       Drfl.set_robot_control(CONTROL_RECOVERY_SAFE_OFF);
   //     }
   //     break;
   //   case STATE_RECOVERY:
-  //     // Drfl.SetRobotControl(CONTROL_RESET_RECOVERY);
+  //     // Drfl.set_robot_control(CONTROL_RESET_RECOVERY);
   //     break;
   //   default:
   //     break;
@@ -99,8 +104,9 @@ void OnMonitroingAccessControlCB(
   std::cout << "OnMonitroingAccessControlCB !! " << int(eTrasnsitControl) << std::endl;
   switch (eTrasnsitControl) {
     case MONITORING_ACCESS_CONTROL_REQUEST:
-      assert(Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_RESPONSE_YES));
-      // Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_RESPONSE_YES);
+      if (!Drfl.manage_access_control(MANAGE_ACCESS_CONTROL_RESPONSE_YES))
+        std::cout << "manage_access_control failed" << std::endl;
+      // Drfl.manage_access_control(MANAGE_ACCESS_CONTROL_RESPONSE_YES);
       break;
     case MONITORING_ACCESS_CONTROL_GRANT:
       g_bHasControlAuthority = TRUE;
@@ -109,7 +115,7 @@ void OnMonitroingAccessControlCB(
     case MONITORING_ACCESS_CONTROL_LOSS:
       g_bHasControlAuthority = FALSE;
       if (g_TpInitailizingComplted) {
-        Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
+        Drfl.manage_access_control(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
       }
       break;
     default:
@@ -174,14 +180,17 @@ int main(int argc, char** argv) {
   Drfl.set_on_program_stopped(OnProgramStopped);
   Drfl.set_on_disconnected(OnDisConnected);
 
-  assert(Drfl.open_connection(IP_ADDR));
+  if (!Drfl.open_connection(IP_ADDR)) {
+    std::cout << "open_connection failed" << std::endl;
+    return 1;
+  }
 
   Drfl.setup_monitoring_version(1); // (0 -> older version, 1 -> latest)
 
   SYSTEM_VERSION tSysVerion = {'\0',};
   Drfl.get_system_version(&tSysVerion);
 
-  if(true!=Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_FORCE_REQUEST)) {
+  if(true!=Drfl.manage_access_control(MANAGE_ACCESS_CONTROL_FORCE_REQUEST)) {
     std::cout << "ManageAccessControl failure " << std::endl;
   }
   // std::cout << "ManageAccessControl done " << std::endl;
@@ -198,11 +207,15 @@ int main(int argc, char** argv) {
   std::cout << "set robot mode ret : " << Drfl.set_robot_mode(ROBOT_MODE_AUTONOMOUS) << std::endl;
 
   Drfl.set_robot_system(ROBOT_SYSTEM_VIRTUAL);
-  while (true) {
+  bool bLoop = true;
+  while (bLoop) {
     cout << "\ninput key : ";
     char ch;
     cin >> ch;
     switch (ch) {
+      case 'q':
+        bLoop = false;
+        break;
       case '0':
       {
         // drl sample.
@@ -229,10 +242,11 @@ int main(int argc, char** argv) {
         float velx[2] = { 250.0, 80.625 };
         float accx[2] = { 1000., 322.5 };
         float g_op_speed = 100;
-        Drfl.set_robot_mode(ROBOT_MODE_AUTONOMOUS);
+        Drfl.set_robot_mode(ROBOT_MODE_MANUAL); // set_tcp is accepted only in manual mode.
         // 사전 TCP 설정 : EWM 용접기 기준 Welding_Torch(0, 200, 300, 90, 67.5, 0)
         if (Drfl.get_tcp() != "Welding Torch")
           Drfl.set_tcp("Welding Torch");
+        Drfl.set_robot_mode(ROBOT_MODE_AUTONOMOUS);
         this_thread::sleep_for(200ms);
         // Drfl.change_operation_speed(g_op_speed);
         CONFIG_DIGITAL_WELDING_INTERFACE_PROCESS r2m_process_data = {
@@ -395,7 +409,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  Drfl.CloseConnection();
+  Drfl.close_connection();
   return 0;
 }
 

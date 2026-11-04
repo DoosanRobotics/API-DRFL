@@ -20,8 +20,6 @@
 #include "../../include/DRFLEx.h"
 using namespace DRAFramework;
 
-#undef NDEBUG
-#include <assert.h>
 
 CDRFLEx Drfl;
 bool g_bHasControlAuthority = FALSE;
@@ -33,8 +31,8 @@ string strDrl =
     "\r\n\
 loop = 0\r\n\
 while loop < 1003:\r\n\
- movej(posj(10,10.10,10,10.10), vel=60, acc=60)\r\n\
- movej(posj(00,00.00,00,00.00), vel=60, acc=60)\r\n\
+ movej(posj(10,10,10,10,10,10), vel=60, acc=60)\r\n\
+ movej(posj(0,0,0,0,0,0), vel=60, acc=60)\r\n\
  loop+=1\r\n";
 
 bool bAlterFlag = FALSE;
@@ -75,7 +73,7 @@ int getch()
 void OnTpInitializingCompleted() {
   // Request control authority after TP initialization.
   g_TpInitailizingComplted = TRUE;
-  Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
+  Drfl.manage_access_control(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
 }
 
 void OnHommingCompleted() {
@@ -84,7 +82,7 @@ void OnHommingCompleted() {
 }
 
 void OnProgramStopped(const PROGRAM_STOP_CAUSE) {
-  Drfl.drl_stop();
+  // The program has already stopped; drl_stop() here would wait on this callback thread.
   // Do only work under 50 msec.
   // assert(Drfl.SetRobotMode(ROBOT_MODE_MANUAL));
   cout << "program stopped" << endl;
@@ -120,7 +118,11 @@ void OnMonitoringCtrlIOCB(const LPMONITORING_CTRLIO pData) {
   }
 }
 
+#if DRCF_VERSION == 2
+void OnMonitoringCtrlIOExCB(const LPMONITORING_CTRLIO_EX pData) {
+#else
 void OnMonitoringCtrlIOExCB(const LPMONITORING_CTRLIO_EX2 pData) {
+#endif
   return;
   cout << "# monitoring ctrl 1 data" << endl;
   for (int i = 0; i < 16; i++) {
@@ -146,22 +148,23 @@ void OnMonitroingAccessControlCB(
 
   switch (eTrasnsitControl) {
     case MONITORING_ACCESS_CONTROL_REQUEST:
-      assert(Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_RESPONSE_YES));
-      // Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_RESPONSE_YES);
+      if (!Drfl.manage_access_control(MANAGE_ACCESS_CONTROL_RESPONSE_YES))
+        std::cout << "manage_access_control failed" << std::endl;
+      // Drfl.manage_access_control(MANAGE_ACCESS_CONTROL_RESPONSE_YES);
       break;
     case MONITORING_ACCESS_CONTROL_GRANT:
       g_bHasControlAuthority = TRUE;
       // cout << "GRANT1" << endl;
-      // cout << "MONITORINGCB : " << (int)Drfl.GetRobotState() << endl;
-      OnMonitoringStateCB(Drfl.GetRobotState());
+      // cout << "MONITORINGCB : " << (int)Drfl.get_robot_state() << endl;
+      OnMonitoringStateCB(Drfl.get_robot_state());
       // cout << "GRANT2" << endl;
       break;
     case MONITORING_ACCESS_CONTROL_DENY:
     case MONITORING_ACCESS_CONTROL_LOSS:
       g_bHasControlAuthority = FALSE;
       if (g_TpInitailizingComplted) {
-        // assert(Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_REQUEST));
-        Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
+        // assert(Drfl.manage_access_control(MANAGE_ACCESS_CONTROL_REQUEST));
+        Drfl.manage_access_control(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
       }
       break;
     default:
@@ -225,15 +228,15 @@ uint32_t ThreadFunc(void* arg) {
 				case 's': {
 					printf("Stop!\n");
 					g_Stop = true;
-					Drfl.MoveStop(STOP_TYPE_SLOW);
+					Drfl.stop(STOP_TYPE_SLOW);
 				} break;
 				case 'p': {
 					printf("Pause!\n");
-					Drfl.MovePause();
+					Drfl.move_pause();
 				} break;
 				case 'r': {
 					printf("Resume!\n");
-					Drfl.MoveResume();
+					Drfl.move_resume();
 				} break;
 			}
 		}
@@ -403,7 +406,10 @@ int main(int argc, char** argv) {
       case '2':
           {
               // Establish connection
-              assert(Drfl.open_connection("127.0.0.1"));
+              if (!Drfl.open_connection("127.0.0.1")) {
+                  std::cout << "open_connection failed" << std::endl;
+                  break;
+              }
               std::cout << "Open Connection !! " << std::endl;
           }
           break;
@@ -425,7 +431,7 @@ int main(int argc, char** argv) {
         // which can be delayed if the server is processing previous disconnect events.
         // Retry once if the first attempt doesn't get GRANT within 5 seconds.
         g_bHasControlAuthority = FALSE;
-        Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
+        Drfl.manage_access_control(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
         std::cout << "Try to get Control Authority !!" << std::endl;
 
         for (int i = 0; i < 50; i++) {
@@ -434,7 +440,7 @@ int main(int argc, char** argv) {
         }
         if (!g_bHasControlAuthority) {
             // Retry once - server may have been busy processing previous disconnect
-            Drfl.ManageAccessControl(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
+            Drfl.manage_access_control(MANAGE_ACCESS_CONTROL_FORCE_REQUEST);
             std::cout << "Retrying..." << std::endl;
             for (int i = 0; i < 50; i++) {
                 if (g_bHasControlAuthority) break;
@@ -481,24 +487,24 @@ int main(int argc, char** argv) {
                   switch ((unsigned char)eState) {
                     case STATE_SAFE_STOP:
                       cout << ">> Recovery: SAFE_STOP -> resetting..." << endl;
-                      Drfl.SetSafeStopResetType(SAFE_STOP_RESET_TYPE_DEFAULT);
-                      Drfl.SetRobotControl(CONTROL_RESET_SAFET_STOP);
+                      Drfl.set_safe_stop_reset_type(SAFE_STOP_RESET_TYPE_DEFAULT);
+                      Drfl.set_robot_control(CONTROL_RESET_SAFET_STOP);
                       break;
                     case STATE_SAFE_OFF:
                       cout << ">> Recovery: SAFE_OFF -> servo on..." << endl;
-                      Drfl.SetRobotControl(CONTROL_SERVO_ON);
+                      Drfl.set_robot_control(CONTROL_SERVO_ON);
                       break;
                     case STATE_SAFE_STOP2:
                       cout << ">> Recovery: SAFE_STOP2 -> recovering..." << endl;
-                      Drfl.SetRobotControl(CONTROL_RECOVERY_SAFE_STOP);
+                      Drfl.set_robot_control(CONTROL_RECOVERY_SAFE_STOP);
                       break;
                     case STATE_SAFE_OFF2:
                       cout << ">> Recovery: SAFE_OFF2 -> recovering..." << endl;
-                      Drfl.SetRobotControl(CONTROL_RECOVERY_SAFE_OFF);
+                      Drfl.set_robot_control(CONTROL_RECOVERY_SAFE_OFF);
                       break;
                     case STATE_NOT_READY:
                       cout << ">> Recovery: NOT_READY -> servo on..." << endl;
-                      Drfl.SetRobotControl(CONTROL_SERVO_ON);
+                      Drfl.set_robot_control(CONTROL_SERVO_ON);
                       break;
                     default:
                       cout << ">> Unknown state: " << (int)eState << endl;
@@ -520,8 +526,10 @@ int main(int argc, char** argv) {
       case '5':
       {
         //Set robot mode and system
-        assert(Drfl.set_robot_mode(ROBOT_MODE_AUTONOMOUS));
-        assert(Drfl.set_robot_system(ROBOT_SYSTEM_REAL));
+        if (!Drfl.set_robot_mode(ROBOT_MODE_AUTONOMOUS) || !Drfl.set_robot_system(ROBOT_SYSTEM_REAL)) {
+          std::cout << "Set Auto Mode failed" << std::endl;
+          break;
+        }
         std::cout << "Set Auto Mode !!" << std::endl;
       }
 
@@ -612,11 +620,7 @@ int main(int argc, char** argv) {
     this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
-  Drfl.CloseConnection();
-
-#ifdef __XENO__
-  rt_task_join(&sub_task);
-#endif // __XENO__
+  Drfl.close_connection();
 
   return 0;
 }

@@ -1,4 +1,6 @@
-#define DRCF_VERSION 2 // Set 2 or 3 according to drcf version.
+#ifndef DRCF_VERSION
+#define DRCF_VERSION 2 // Set 2 or 3 according to drcf version, or pass -DDRCF_VERSION=3.
+#endif
 
 #include "../../include/DRFLEx.h"
 
@@ -72,10 +74,10 @@ int main(){
 	});
 	
 	string version = "v1.0";
-	// float period = 0.002;
-	float hz = 100.0f;
+	// The output configuration drives the monitoring stream; its period is in seconds.
+	float period = 0.01f; // 100 Hz
 	int losscount = 4;
-	std::cout << "RT Result " << robot.set_rt_control_input(version, hz, losscount) << std::endl;
+	std::cout << "RT Result " << robot.set_rt_control_output(version, period, losscount) << std::endl;
 
 	std::cout << "Press Enter to continue..." ;
 	std::cin.get();  // Waits for user to press Enter

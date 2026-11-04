@@ -100,7 +100,7 @@ fi
 
 # Link libraries and generate the executable in the out/ directory
 echo "Linking and creating the executable in the out/ directory..."
-g++ -o "$EXE_PATH" "$OBJ_FILE" "${LIBRARY_PATH}/libDRFL.a" "$FOUNDATION_LIB" "$NET_LIB"
+g++ -o "$EXE_PATH" "$OBJ_FILE" "${LIBRARY_PATH}/libDRFL.a" "$FOUNDATION_LIB" "$NET_LIB" -pthread
 if [[ $? -ne 0 ]]; then
     echo "Linking failed. Exiting."
     exit 1
