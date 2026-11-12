@@ -67,7 +67,7 @@ LIBRARY_PATH="../../library/Linux/64bits"
 if [[ "$ARCHITECTURE" == "x86_64" ]]; then
     if [[ "$UBUNTU_VERSION" == "18.04" ]]; then
         LIBRARY_PATH+="/amd64/18.04"
-    elif [[ "$UBUNTU_VERSION" == "20.04" || "$UBUNTU_VERSION" == "22.04" || "$UBUNTU_VERSION" == "24.04" ]]; then
+    elif [[ "$UBUNTU_VERSION" == "20.04" || "$UBUNTU_VERSION" == "22.04" || "$UBUNTU_VERSION" == "24.04" || "$UBUNTU_VERSION" == "26.04" ]]; then
         LIBRARY_PATH+="/amd64/${UBUNTU_VERSION}"
     else
         echo "Unsupported Ubuntu version for x86_64."
@@ -76,7 +76,7 @@ if [[ "$ARCHITECTURE" == "x86_64" ]]; then
 elif [[ "$ARCHITECTURE" == "aarch64" ]]; then
     if [[ "$UBUNTU_VERSION" == "18.04" ]]; then
         LIBRARY_PATH+="/arm64/18.04"
-    elif [[ "$UBUNTU_VERSION" == "20.04" || "$UBUNTU_VERSION" == "22.04" || "$UBUNTU_VERSION" == "24.04" ]]; then
+    elif [[ "$UBUNTU_VERSION" == "20.04" || "$UBUNTU_VERSION" == "22.04" || "$UBUNTU_VERSION" == "24.04" || "$UBUNTU_VERSION" == "26.04" ]]; then
         LIBRARY_PATH+="/arm64/${UBUNTU_VERSION}"
     else
         echo "Unsupported Ubuntu version for arm64."

@@ -137,7 +137,7 @@ For easier building and cleaning, you can use the provided automated scripts:
 
 #### Manual Installation 
 
-> Ubuntu supports versions : 18.04, 20.04 and 22.04.
+> Ubuntu supports versions : 18.04, 20.04, 22.04, 24.04 and 26.04.
 
 1. Navigate to the example directory and compile using g++:
    ```bash
@@ -148,19 +148,19 @@ For easier building and cleaning, you can use the provided automated scripts:
     ```bash
     g++ -o drfl_test main.o ../../library/Linux/64bits/amd64/{your_ubuntu_version}/libDRFL.a /usr/lib/libPocoFoundation.so /usr/lib/libPocoNet.so
     ```
-    **x86(20.04 or 22.04)** 
+    **x86(20.04, 22.04, 24.04 or 26.04)** 
     ```bash
     g++ -o drfl_test main.o ../../library/Linux/64bits/amd64/{your_ubuntu_version}/libDRFL.a /usr/lib/x86_64-linux-gnu/libPocoFoundation.so /usr/lib/x86_64-linux-gnu/libPocoNet.so
     ```
     **Arm64(18.04)**
     
     ```bash
-    g++ -o drfl_test main.o ../../library/Linux/64bits/arn64/{your_ubuntu_version}/libDRFL.a /usr/lib/libPocoFoundation.so /usr/lib/libPocoNet.so
+    g++ -o drfl_test main.o ../../library/Linux/64bits/arm64/{your_ubuntu_version}/libDRFL.a /usr/lib/libPocoFoundation.so /usr/lib/libPocoNet.so
     ```
-    **Arm64(20.04 or 22.04)**
+    **Arm64(20.04, 22.04, 24.04 or 26.04)**
     
     ```bash
-    g++ -o drfl_test main.o ../../library/Linux/64bits/arn64/{your_ubuntu_version}/libDRFL.a /usr/lib/aarch64-linux-gnu/libPocoFoundation.so /usr/lib/aarch64-linux-gnu/libPocoNet.so
+    g++ -o drfl_test main.o ../../library/Linux/64bits/arm64/{your_ubuntu_version}/libDRFL.a /usr/lib/aarch64-linux-gnu/libPocoFoundation.so /usr/lib/aarch64-linux-gnu/libPocoNet.so
     ```
 
 3. Verify the build and, upon completion, proceed with testing the connection to the actual controller.
